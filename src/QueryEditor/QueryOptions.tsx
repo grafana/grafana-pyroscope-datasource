@@ -160,7 +160,7 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               />
             </EditorField>
           )}
-          {config.featureToggles.profilesHeatmap && (
+          {(config.featureToggles as Record<string, boolean | undefined>).profilesHeatmap && (
             <>
               <EditorField label={'Heatmap'} tooltip={<>Include heatmap visualization of profile data over time.</>}>
                 <InlineSwitch

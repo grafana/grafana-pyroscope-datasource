@@ -25,7 +25,7 @@ export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
   /**
    * Allows to group the results.
    */
-  groupBy: Array<string>;
+  groupBy: string[];
   /**
    * Specifies the type of heatmap query
    */
@@ -53,7 +53,7 @@ export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
   /**
    * Specifies the query profile id selectors.
    */
-  profileIdSelector?: Array<string>;
+  profileIdSelector?: string[];
   /**
    * Specifies the type of profile to query.
    */
@@ -61,7 +61,7 @@ export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
   /**
    * Specifies the query span selectors.
    */
-  spanSelector?: Array<string>;
+  spanSelector?: string[];
 }
 
 export const defaultGrafanaPyroscopeDataQuery: Partial<GrafanaPyroscopeDataQuery> = {

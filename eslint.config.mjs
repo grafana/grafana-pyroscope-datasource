@@ -43,6 +43,7 @@ export default defineConfig([
       // monorepo's v5. Disable to match the effective behaviour of the source repo.
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/refs': 'off',
+      'react-hooks/purity': 'off',
     },
   },
 ]);
