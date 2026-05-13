@@ -2,8 +2,6 @@ module github.com/grafana/grafana-pyroscope-datasource
 
 go 1.25.7
 
-replace github.com/grafana/grafana-pyroscope-datasource => /Users/ismailsimsek.grafana/Documents/workspace/plugins/grafana-pyroscope-datasource
-
 require (
 	connectrpc.com/connect v1.19.2
 	github.com/dustin/go-humanize v1.0.1
