@@ -18,7 +18,7 @@ jobs:
   # Data Source Instances portal. The current placeholder assumes a `pyroscope`
   # output key — confirm and adjust if necessary.
   playwright-cloud:
-    uses: grafana/data-sources-ci-workflows/.github/workflows/playwright-cloud.yml@main
+    uses: grafana/data-sources-ci-workflows/.github/workflows/playwright-cloud.yml@75b9d9544fb63508d7d0e9afec354afd86f94d5b # main
     secrets: inherit
     with:
       repo-secrets: |
