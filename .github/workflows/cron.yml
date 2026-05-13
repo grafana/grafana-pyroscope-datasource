@@ -1,0 +1,28 @@
+name: Scheduled Cloud end-to-end tests
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  # Runs the Playwright end-to-end suite against the shared DSE2EDEV Grafana Cloud
+  # instance via Grafana Bench. The data source instance is provisioned via the Data
+  # Source Instances portal (https://datasources.grafana.net/), and its connection
+  # details are read from Vault using the paths below.
+  #
+  # TODO: replace the <instance> segment of each Vault path with the actual Pulumi
+  # outputKey for the provisioned Pyroscope instance once it's published in the
+  # Data Source Instances portal. The current placeholder assumes a `pyroscope`
+  # output key — confirm and adjust if necessary.
+  playwright-cloud:
+    uses: grafana/data-sources-ci-workflows/.github/workflows/playwright-cloud.yml@main
+    secrets: inherit
+    with:
+      repo-secrets: |
+        DS_INSTANCE_HOST=grafana-pyroscope-datasource/pyroscope:json_host
+        DS_INSTANCE_PASSWORD=grafana-pyroscope-datasource/pyroscope:secure_password
+        DS_INSTANCE_PORT=grafana-pyroscope-datasource/pyroscope:json_port
+        DS_INSTANCE_USERNAME=grafana-pyroscope-datasource/pyroscope:json_username

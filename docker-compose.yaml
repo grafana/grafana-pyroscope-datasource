@@ -1,5 +1,14 @@
 services:
+  pyroscope:
+    image: grafana/pyroscope:latest
+    pull_policy: missing
+    ports:
+      - 4040:4040
+
   grafana:
     extends:
       file: .config/docker-compose-base.yaml
       service: grafana
+    depends_on:
+      pyroscope:
+        condition: service_started
