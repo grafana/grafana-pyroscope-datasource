@@ -10,7 +10,7 @@ import {
   type DataQueryRequest,
 } from '@grafana/data';
 
-import { type GrafanaPyroscopeDataQuery } from './dataquery.gen';
+import { type GrafanaPyroscopeDataQuery } from './dataquery';
 
 export function extractLabelMatchers(tokens: Array<string | Token>): AbstractLabelMatcher[] {
   const labelMatchers: AbstractLabelMatcher[] = [];

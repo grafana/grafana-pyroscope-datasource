@@ -13,7 +13,7 @@ import (
 	querierv1 "github.com/grafana/pyroscope/api/gen/proto/go/querier/v1"
 	typesv1 "github.com/grafana/pyroscope/api/gen/proto/go/types/v1"
 
-	"github.com/grafana/grafana/pkg/tsdb/grafana-pyroscope-datasource/annotation"
+	"github.com/grafana/grafana-pyroscope-datasource/pkg/grafana-pyroscope-datasource/annotation"
 )
 
 // This is where the tests for the datasource backend live.

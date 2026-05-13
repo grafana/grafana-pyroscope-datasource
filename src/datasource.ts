@@ -16,7 +16,7 @@ import {
 import { DataSourceWithBackend, getTemplateSrv, type TemplateSrv } from '@grafana/runtime';
 
 import { VariableSupport } from './VariableSupport';
-import { defaultGrafanaPyroscopeDataQuery, defaultPyroscopeQueryType } from './dataquery.gen';
+import { defaultGrafanaPyroscopeDataQuery, defaultPyroscopeQueryType } from './dataquery';
 import { type PyroscopeDataSourceOptions, type Query, type ProfileTypeMessage } from './types';
 import {
   addLabelToQuery,

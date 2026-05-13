@@ -12,7 +12,7 @@ import {
   type PreferredVisualisationType,
 } from '@grafana/data';
 
-import { type GrafanaPyroscopeDataQuery } from './dataquery.gen';
+import { type GrafanaPyroscopeDataQuery } from './dataquery';
 import {
   addLabelToQuery,
   enrichDataFrameWithAssistantContentMapper,

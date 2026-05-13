@@ -1,7 +1,7 @@
 import { AbstractLabelOperator, CoreApp, makeTimeRange } from '@grafana/data';
 import { type TemplateSrv } from '@grafana/runtime';
 
-import { defaultPyroscopeQueryType } from './dataquery.gen';
+import { defaultPyroscopeQueryType } from './dataquery';
 import { normalizeQuery, PyroscopeDataSource } from './datasource';
 import { defaultSettings, mockFetchPyroscopeDatasourceSettings } from './mocks';
 import { type Query } from './types';
