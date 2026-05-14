@@ -1,5 +1,4 @@
 import { test, expect, type ExplorePage } from '@grafana/plugin-e2e';
-import { type Locator, type Page } from '@playwright/test';
 
 const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
 
@@ -8,28 +7,6 @@ const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
 // `now-15m` is forgiving for both scenarios.
 const RANGE_FROM = 'now-15m';
 const RANGE_TO = 'now';
-
-// Grafana 13 migrated query editor row selectors from aria-label to data-testid
-// (https://github.com/grafana/grafana/pull/121784). This helper matches both
-// shapes so tests work across versions.
-function getQueryEditorRow(page: Page, refId: string): Locator {
-  return page
-    .locator('[data-testid="data-testid Query editor row"], [aria-label="Query editor row"]')
-    .filter({
-      has: page.locator(
-        `[data-testid="data-testid Query editor row title ${refId}"], [aria-label="Query editor row title ${refId}"]`
-      ),
-    });
-}
-
-// The ProfileTypesCascader component wraps @grafana/ui's Cascader in a div with
-// this data-testid. The Cascader's underlying input rendering changed between
-// Grafana versions (rc-cascader v2 → v3 changed from input[placeholder] to a
-// combobox input with a sibling span for the placeholder text). Using the
-// wrapper data-testid keeps locators stable across all Grafana versions.
-function getProfileTypeCascader(page: Page): Locator {
-  return page.locator('[data-testid="pyroscope-profile-type-cascader"]');
-}
 
 type ExploreOpts = {
   profileTypeId?: string;
@@ -86,24 +63,19 @@ test.describe('Query editor', () => {
       async ({ page, readProvisionedDataSource }) => {
         const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
         await page.goto(exploreUrl(ds.uid));
-        // The Monaco-based label selector is always rendered immediately (no async load).
-        // It is a more stable smoke anchor than the profile-type cascader, which only
-        // renders after the async profileTypes fetch completes.
-        await expect(page.getByRole('textbox', { name: /Editor content/ })).toBeVisible({ timeout: 30_000 });
+        // The profile-type cascader is the most distinctive element of the editor.
+        await expect(page.getByRole('textbox', { name: 'Select profile type' })).toBeVisible();
       }
     );
 
     test('should render the profile type cascader', async ({ page, readProvisionedDataSource }) => {
       const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
       await page.goto(exploreUrl(ds.uid));
-      // The cascader only renders after the async profileTypes fetch; use a generous
-      // timeout to handle slow CI starts.
-      const cascader = getProfileTypeCascader(page);
-      await expect(cascader).toBeVisible({ timeout: 15_000 });
-      // The plugin auto-selects a default profile type once profileTypes load
+      const cascader = page.getByRole('textbox', { name: 'Select profile type' });
+      await expect(cascader).toBeVisible();
+      // The plugin auto-selects a default profile type after profileTypes load
       // (preferring process_cpu when available, as Pyroscope self-profiles in CPU).
-      // The placeholder span disappears when a value is selected (rc-cascader v2 and v3).
-      await expect(cascader).not.toContainText('Select profile type');
+      await expect(cascader).not.toHaveValue('');
     });
 
     test('should render the label selector (Monaco) editor', async ({ page, readProvisionedDataSource }) => {
