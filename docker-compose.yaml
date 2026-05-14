@@ -5,6 +5,54 @@ services:
     ports:
       - 4040:4040
 
+  # Waits for Pyroscope to start self-profiling before Grafana is launched, so
+  # that the "Query editor with fixture data" tests always find CPU-profile data.
+  # Pyroscope profiles its own Go process; the first sample appears after the
+  # default scrape interval (~15 s). We poll the ConnectRPC ProfileTypes endpoint
+  # with a JSON payload until "process_cpu" shows up, then exit 0.
+  pyroscope-warmup:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      - pyroscope
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        echo "Waiting for Pyroscope HTTP API to be ready..."
+        attempts=0
+        until curl --silent --fail "http://pyroscope:4040/ready" > /dev/null 2>&1; do
+          attempts=$$((attempts + 1))
+          if [ $$attempts -gt 30 ]; then
+            echo "Pyroscope never became ready" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+        echo "Pyroscope is up. Polling for self-profiling CPU data..."
+        attempts=0
+        until
+          now_ms=$$((($$(date +%s)) * 1000))
+          start_ms=$$((now_ms - 120000))
+          curl --silent \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -H "Connect-Protocol-Version: 1" \
+            "http://pyroscope:4040/querier.v1.QuerierService/ProfileTypes" \
+            --data "{\"start\":$${start_ms},\"end\":$${now_ms}}" \
+            2>/dev/null | grep -q '"id":"process_cpu'
+        do
+          attempts=$$((attempts + 1))
+          if [ $$attempts -gt 24 ]; then
+            echo "No CPU profile data after 120 s — giving up" >&2
+            exit 1
+          fi
+          echo "Attempt $$attempts: no CPU data yet, waiting 5 s..."
+          sleep 5
+        done
+        echo "Pyroscope has CPU profile data — e2e fixture tests can start"
+    restart: no
+
   grafana:
     extends:
       file: .config/docker-compose-base.yaml
@@ -13,5 +61,5 @@ services:
       # Grafana 13 enables splashScreen by default; the overlay blocks Playwright interactions.
       GF_FEATURE_TOGGLES_splashScreen: 'false'
     depends_on:
-      pyroscope:
-        condition: service_started
+      pyroscope-warmup:
+        condition: service_completed_successfully
