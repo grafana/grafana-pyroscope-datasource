@@ -23,7 +23,7 @@ services:
         attempts=0
         until curl --silent --fail "http://pyroscope:4040/ready" > /dev/null 2>&1; do
           attempts=$$((attempts + 1))
-          if [ $$attempts -gt 30 ]; then
+          if [ $$attempts -gt 60 ]; then
             echo "Pyroscope never became ready" >&2
             exit 1
           fi
