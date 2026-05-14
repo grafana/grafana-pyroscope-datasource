@@ -1,4 +1,5 @@
 import { test, expect, type ExplorePage } from '@grafana/plugin-e2e';
+import { type Locator, type Page } from '@playwright/test';
 
 const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
 
@@ -7,6 +8,29 @@ const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
 // `now-15m` is forgiving for both scenarios.
 const RANGE_FROM = 'now-15m';
 const RANGE_TO = 'now';
+
+// Grafana 13 migrated query editor row selectors from aria-label to data-testid
+// (https://github.com/grafana/grafana/pull/121784). This helper matches both
+// shapes so tests work across versions.
+function getQueryEditorRow(page: Page, refId: string): Locator {
+  return page
+    .locator('[data-testid="data-testid Query editor row"], [aria-label="Query editor row"]')
+    .filter({
+      has: page.locator(
+        `[data-testid="data-testid Query editor row title ${refId}"], [aria-label="Query editor row title ${refId}"]`
+      ),
+    });
+}
+
+// Grafana's Cascader component changed its ARIA role between versions. This helper
+// matches the profile type cascader input regardless of whether it renders as
+// a textbox or combobox role.
+function getProfileTypeCascader(page: Page): Locator {
+  return page
+    .getByRole('combobox', { name: 'Select profile type' })
+    .or(page.getByRole('textbox', { name: 'Select profile type' }))
+    .or(page.getByPlaceholder('Select profile type'));
+}
 
 type ExploreOpts = {
   profileTypeId?: string;
@@ -64,14 +88,14 @@ test.describe('Query editor', () => {
         const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
         await page.goto(exploreUrl(ds.uid));
         // The profile-type cascader is the most distinctive element of the editor.
-        await expect(page.getByRole('textbox', { name: 'Select profile type' })).toBeVisible();
+        await expect(getProfileTypeCascader(page)).toBeVisible();
       }
     );
 
     test('should render the profile type cascader', async ({ page, readProvisionedDataSource }) => {
       const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
       await page.goto(exploreUrl(ds.uid));
-      const cascader = page.getByRole('textbox', { name: 'Select profile type' });
+      const cascader = getProfileTypeCascader(page);
       await expect(cascader).toBeVisible();
       // The plugin auto-selects a default profile type after profileTypes load
       // (preferring process_cpu when available, as Pyroscope self-profiles in CPU).
