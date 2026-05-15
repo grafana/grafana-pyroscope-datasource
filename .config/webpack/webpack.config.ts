@@ -97,6 +97,11 @@ const config = async (env: Env): Promise<Configuration> => {
                   decorators: false,
                   dynamicImport: true,
                 },
+                transform: {
+                  react: {
+                    runtime: 'automatic',
+                  },
+                },
               },
             },
           },

@@ -37,6 +37,13 @@ function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
   return `/explore?orgId=1&schemaVersion=1&panes=${encodeURIComponent(JSON.stringify(panes))}`;
 }
 
+const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
+
+// Backend warmup (waiting for Pyroscope to finish ingesting its first profile)
+// is handled once for the whole run by `tests/e2e/global-setup.ts`, so every
+// test in this file can assume `profileTypes` is non-empty and the "both"
+// query returns both the metrics frame and the flamegraph frame.
+
 // Read /api/ds/query response bodies inside the predicate to avoid CDP buffer eviction.
 // TODO: remove once @grafana/plugin-e2e exposes body reading natively.
 function waitForQueryDataResponseWithBody(explorePage: ExplorePage) {
@@ -64,14 +71,17 @@ test.describe('Query editor', () => {
         const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
         await page.goto(exploreUrl(ds.uid));
         // The profile-type cascader is the most distinctive element of the editor.
-        await expect(page.getByRole('textbox', { name: 'Select profile type' })).toBeVisible();
+        // The cascader input only exposes a `placeholder`, so use `getByPlaceholder`
+        // — `getByRole('textbox', { name })` doesn't include placeholder in the
+        // computed accessible name on Grafana <= 13.0 (different host wrapper).
+        await expect(page.getByPlaceholder('Select profile type')).toBeVisible();
       }
     );
 
     test('should render the profile type cascader', async ({ page, readProvisionedDataSource }) => {
       const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
       await page.goto(exploreUrl(ds.uid));
-      const cascader = page.getByRole('textbox', { name: 'Select profile type' });
+      const cascader = page.getByPlaceholder('Select profile type');
       await expect(cascader).toBeVisible();
       // The plugin auto-selects a default profile type after profileTypes load
       // (preferring process_cpu when available, as Pyroscope self-profiles in CPU).
@@ -143,8 +153,6 @@ test.describe('Query editor with fixture data', () => {
   // correctly. Run serially to avoid hammering the backend in parallel.
   test.describe.configure({ mode: 'serial' });
 
-  const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
-
   test('"both" query returns both a time series and a flamegraph frame', async ({
     page,
     explorePage,
@@ -214,7 +222,8 @@ test.describe('Query editor with fixture data', () => {
   }) => {
     const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
 
-    let body: { name?: string; id?: string }[] | null = null;
+    type ProfileType = { name?: string; id?: string };
+    let body: ProfileType[] = [];
     const responsePromise = page.waitForResponse(async (r) => {
       if (!r.url().includes(`/resources/profileTypes`) || !r.ok()) {
         return false;
@@ -223,15 +232,15 @@ test.describe('Query editor with fixture data', () => {
       if (!Array.isArray(b)) {
         return false;
       }
-      body = b;
+      body = b as ProfileType[];
       return true;
     });
 
     await page.goto(exploreUrl(ds.uid));
     await responsePromise;
 
-    expect((body ?? []).length).toBeGreaterThan(0);
+    expect(body.length).toBeGreaterThan(0);
     // Pyroscope ships with a fixed set of standard profile types; CPU is one of them.
-    expect((body ?? []).some((p) => p.id?.startsWith('process_cpu'))).toBe(true);
+    expect(body.some((p) => p.id?.startsWith('process_cpu'))).toBe(true);
   });
 });

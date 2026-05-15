@@ -19,6 +19,7 @@ export function ProfileTypesCascader(props: Props) {
 
   return (
     <Cascader
+      data-testid="pyroscope-profile-type-cascader"
       placeholder={props.placeholder}
       separator={'-'}
       displayAllSelectedLevels={true}
