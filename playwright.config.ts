@@ -14,7 +14,13 @@ const pluginE2eAuth = `${dirname(require.resolve('@grafana/plugin-e2e'))}/auth`;
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig<PluginOptions>({
-  testDir: './tests',
+  testDir: './tests/e2e',
+  /* Run a one-shot Pyroscope warmup before any worker spawns. See the script
+   * for full motivation – TL;DR: Pyroscope's first profile responses can be
+   * empty for ~10–60s after the container starts, and the query editor caches
+   * those empty responses, so we wait for the backend to be stable before
+   * letting tests run. */
+  globalSetup: require.resolve('./tests/e2e/global-setup.ts'),
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */

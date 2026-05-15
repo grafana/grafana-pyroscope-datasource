@@ -1,12 +1,13 @@
 module github.com/grafana/grafana-pyroscope-datasource
 
-go 1.25.7
+go 1.26.3
 
 require (
 	connectrpc.com/connect v1.19.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/grafana/grafana-plugin-sdk-go v0.292.0
 	github.com/grafana/pyroscope/api v1.5.0
+	github.com/magefile/mage v1.17.1
 	github.com/prometheus/prometheus v0.311.3
 	github.com/stretchr/testify v1.11.1
 	github.com/xlab/treeprint v1.2.0
@@ -54,7 +55,6 @@ require (
 	github.com/jszwedko/go-datemath v0.1.1-0.20230526204004-640a500621d6 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
-	github.com/magefile/mage v1.17.1 // indirect
 	github.com/mattetti/filebuffer v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
