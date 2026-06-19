@@ -1,6 +1,5 @@
 import React from 'react';
 import './.config/jest-setup';
-import { matchers } from './src/test/matchers';
 import { MessageChannel } from 'worker_threads';
 
 global.React = React;
@@ -53,5 +52,3 @@ HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
   translate: jest.fn(),
   drawImage: jest.fn(),
 }));
-
-expect.extend(matchers);
