@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [prod]
+        environment: [dev, ops, prod]
     name: CD
     uses: grafana/plugin-ci-workflows/.github/workflows/cd.yml@ci-cd-workflows/v9.0.0
     permissions:
