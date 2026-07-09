@@ -1,7 +1,7 @@
 {
   "name": "grafana-pyroscope-datasource",
   "description": "Data source for Grafana Pyroscope, horizontally-scalable, highly-available, multi-tenant continuous profiling aggregation system.",
-  "version": "13.0.3",
+  "version": "13.0.4",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
     "dev": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
