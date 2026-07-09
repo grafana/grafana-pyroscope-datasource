@@ -3,9 +3,9 @@ package main
 import (
 	"os"
 
-	pyroscope "github.com/grafana/grafana-pyroscope-datasource/pkg/grafana-pyroscope-datasource"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/datasource"
 	"github.com/grafana/grafana-plugin-sdk-go/backend/log"
+	pyroscope "github.com/grafana/grafana-pyroscope-datasource/pkg/grafana-pyroscope-datasource"
 )
 
 func main() {

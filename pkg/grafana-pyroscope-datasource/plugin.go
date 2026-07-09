@@ -11,8 +11,6 @@ import (
 	"github.com/grafana/grafana-plugin-sdk-go/backend/instancemgmt"
 )
 
-var logger = backend.NewLoggerWith("logger", "tsdb.pyroscope")
-
 // Return the file, line, and (full-path) function name of the caller
 func getRunContext() (string, int, string) {
 	pc := make([]uintptr, 10)
@@ -32,5 +30,5 @@ func logEntrypoint() string {
 
 // NewDatasource creates a new datasource instance for use with datasource.Manage.
 func NewDatasource(ctx context.Context, settings backend.DataSourceInstanceSettings) (instancemgmt.Instance, error) {
-	return NewPyroscopeDatasource(ctx, *httpclient.NewProvider(), settings)
+	return NewPyroscopeDatasource(ctx, *httpclient.NewProvider(), settings, backend.NewLoggerWith("logger", "grafana-pyroscope-datasource"))
 }
