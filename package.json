@@ -19,7 +19,7 @@
   "devDependencies": {
     "@grafana/eslint-config": "9.0.0",
     "@grafana/plugin-e2e": "3.8.0",
-    "@grafana/sign-plugin": "^3.2.2",
+    "@grafana/sign-plugin": "3.2.2",
     "@grafana/tsconfig": "2.1.0",
     "@playwright/test": "1.60.0",
     "@stylistic/eslint-plugin-ts": "4.4.1",
@@ -75,7 +75,7 @@
     "@grafana/assistant": "0.1.24",
     "@grafana/data": "13.0.2",
     "@grafana/e2e-selectors": "13.0.1",
-    "@grafana/plugin-ui": "0.15.0",
+    "@grafana/plugin-ui": "0.16.0",
     "@grafana/runtime": "13.0.2",
     "@grafana/schema": "13.0.2",
     "@grafana/ui": "13.0.2",
