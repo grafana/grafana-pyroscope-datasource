@@ -14,6 +14,8 @@ module.exports = {
   transformIgnorePatterns: [
     require('./.config/jest/utils').nodeModulesToTransform([
       ...require('./.config/jest/utils').grafanaESModules,
+      '@grafana/plugin-ui',
+      '@marcbachmann/cel-js',
       'monaco-editor',
       // OpenFeature packages ship ESM-only; needed by @grafana/runtime
       '@openfeature/ofrep-web-provider',
