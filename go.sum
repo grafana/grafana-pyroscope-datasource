@@ -173,8 +173,8 @@ github.com/grafana/otel-profiling-go v0.6.0 h1:W7lOZaJj4IJISXMcM1UBk3fJF3tzF2OD6
 github.com/grafana/otel-profiling-go v0.6.0/go.mod h1:cqLIDgNXlnzknJ0WLiEe+JPjZk2MZ4ftMdqRJRWj1ZM=
 github.com/grafana/pyroscope-go/godeltaprof v0.1.12 h1:X6OemT2WcLtxdmNukEQuIp0c+efWVI/tBTd0oeWeDHI=
 github.com/grafana/pyroscope-go/godeltaprof v0.1.12/go.mod h1:aNSXN1bn1VHAd06EiepmwhAabHsMc67gx8itecdF2c8=
-github.com/grafana/pyroscope/api v1.5.0 h1:5vBeCOJ6uAKPN1k/M51/zLvrXYVxP0WJJT7MGbq68wA=
-github.com/grafana/pyroscope/api v1.5.0/go.mod h1:JXy9oodWgLUVkUUlSk9+2Y0D4DWWwTQJo8NLXT36zg4=
+github.com/grafana/pyroscope/api v1.5.1-0.20260730112731-788a581f23db h1:68bWHGCjB8srh2d5BNbZ3q62rBSPU6YuEKqdu3ho7fo=
+github.com/grafana/pyroscope/api v1.5.1-0.20260730112731-788a581f23db/go.mod h1:UyyVx/UqwpFB9mmvbi2z5VWlQR6YsifvYLfutnArO90=
 github.com/grafana/regexp v0.0.0-20250905093917-f7b3be9d1853 h1:cLN4IBkmkYZNnk7EAJ0BHIethd+J6LqxFNw5mSiI2bM=
 github.com/grafana/regexp v0.0.0-20250905093917-f7b3be9d1853/go.mod h1:+JKpmjMGhpgPL+rXZ5nsZieVzvarn86asRlBg4uNGnk=
 github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.1.0 h1:QGLs/O40yoNK9vmy4rhUGBVyMf1lISBGtXRpsu/Qu/o=
