@@ -21,6 +21,11 @@ compatibility with existing dashboards and provisioning.
 
 - Grafana 12.3.0 or later (see `dependencies.grafanaDependency` in
   [`src/plugin.json`](./src/plugin.json)).
+- Filtering profiles by **Trace ID** requires a Pyroscope server supporting
+  `trace_id_selector` on the query API, and an instrumentation SDK that emits the
+  `trace_id` pprof sample label (for example
+  [`otel-profiling-go`](https://github.com/grafana/otel-profiling-go) v0.6.0 or later,
+  or OTLP profile ingestion). Trace ID and Span ID cannot be used in the same query.
 
 ## Getting started
 
