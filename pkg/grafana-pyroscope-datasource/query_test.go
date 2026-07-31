@@ -610,6 +610,10 @@ func Test_seriesToDataFrame(t *testing.T) {
 
 type FakeClient struct {
 	Args []any
+	// Kept separate from Args: under queryTypeBoth, GetSeries and GetProfile run in
+	// parallel goroutines, so sharing one slice is a data race and would also make
+	// the metrics subtests' positional reads order-dependent.
+	ProfileArgs []any
 }
 
 func (f *FakeClient) ProfileTypes(ctx context.Context, start int64, end int64) ([]*ProfileType, error) {
@@ -633,7 +637,8 @@ func (f *FakeClient) LabelNames(ctx context.Context, labelSelector string, start
 	panic("implement me")
 }
 
-func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string) (*ProfileResponse, error) {
+func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string) (*ProfileResponse, error) {
+	f.ProfileArgs = []any{profileTypeID, labelSelector, start, end, maxNodes, profileIdSelector, traceIdSelector}
 	return &ProfileResponse{
 		Flamebearer: &Flamebearer{
 			Names: []string{"foo", "bar", "baz"},
