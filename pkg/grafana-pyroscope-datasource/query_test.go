@@ -98,6 +98,39 @@ func Test_query(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, []string{"app", "instance"}, groupBy)
 	})
+
+	t.Run("query profile forwards traceIdSelector", func(t *testing.T) {
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeProfile
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Nil(t, resp.Error)
+		traceIdSelector, ok := client.ProfileArgs[6].([]string)
+		require.True(t, ok)
+		require.Equal(t, []string{"7c9e66797425440de944be07fc1f90ae"}, traceIdSelector)
+	})
+
+	t.Run("query profile rejects span and trace selectors together", func(t *testing.T) {
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeProfile
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","spanSelector":["64f170a95f537095"],"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Error(t, resp.Error)
+		require.Contains(t, resp.Error.Error(), "cannot be combined")
+	})
+
+	t.Run("query metrics ignores span and trace selectors", func(t *testing.T) {
+		// Neither selector applies to the metrics path, so a metrics query carrying
+		// both must still succeed. Reachable in the UI: switching Query Type to
+		// Metric leaves both fields populated.
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeMetrics
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","spanSelector":["64f170a95f537095"],"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Nil(t, resp.Error)
+		require.Equal(t, 1, len(resp.Frames))
+		require.Equal(t, "time", resp.Frames[0].Fields[0].Name)
+	})
 }
 
 // Asserts the JSON tags on the selector family. src/dataquery.ts and
