@@ -2,6 +2,7 @@ package pyroscope
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -97,6 +98,22 @@ func Test_query(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, []string{"app", "instance"}, groupBy)
 	})
+}
+
+// Asserts the JSON tags on the selector family. src/dataquery.ts and
+// kinds/dataquery/types_dataquery.go are hand-maintained mirrors of each other,
+// and a mismatch is dropped silently at unmarshal: no compile error, no other
+// failing test, the query just runs as if the selector were never set.
+//
+// This is a Go-side check only; it cannot catch a typo on the TypeScript side.
+// The cross-language guard is the request-payload assertion in the e2e suite.
+func Test_queryModelSelectorJSONTags(t *testing.T) {
+	var qm queryModel
+	raw := []byte(`{"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"],"spanSelector":["64f170a95f537095"],"profileIdSelector":["7c9e6679-7425-40de-944b-e07fc1f90ae7"]}`)
+	require.NoError(t, json.Unmarshal(raw, &qm))
+	require.Equal(t, []string{"7c9e66797425440de944be07fc1f90ae"}, qm.TraceIdSelector)
+	require.Equal(t, []string{"64f170a95f537095"}, qm.SpanSelector)
+	require.Equal(t, []string{"7c9e6679-7425-40de-944b-e07fc1f90ae7"}, qm.ProfileIdSelector)
 }
 
 func makeDataQuery() *backend.DataQuery {
