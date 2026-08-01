@@ -136,8 +136,7 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
             label={'Trace ID'}
             tooltip={
               <>
-                Sets the trace ID from which to search for profiles. Applies to the profile only &mdash; the time
-                series is not filtered. Cannot be combined with Span ID.
+                Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.
               </>
             }
             invalid={selectorConflict}
@@ -159,8 +158,7 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
             label={'Span ID'}
             tooltip={
               <>
-                Sets the span ID from which to search for profiles. Applies to the profile only &mdash; the time
-                series is not filtered. Cannot be combined with Trace ID.
+                Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.
               </>
             }
             invalid={selectorConflict}
