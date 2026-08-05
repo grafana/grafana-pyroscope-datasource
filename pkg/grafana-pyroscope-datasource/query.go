@@ -147,11 +147,11 @@ func (d *PyroscopeDatasource) query(ctx context.Context, pCtx backend.PluginCont
 	if query.QueryType == queryTypeProfile || query.QueryType == queryTypeBoth {
 		g.Go(func() error {
 			// Pyroscope rejects a request carrying both selectors, and the span path
-			// uses an RPC that has no trace field at all -- so silently preferring one
-			// would drop the other. Fail loudly instead. Checked here rather than at the
-			// top of query() because neither selector applies to the metrics path.
+			// uses an RPC that has no trace field at all, so silently preferring one
+			// would drop the other. Fail loudly instead. Checked here rather than at
+			// the top of query() because neither selector applies to the metrics path.
 			if len(qm.SpanSelector) > 0 && len(qm.TraceIdSelector) > 0 {
-				err := backend.DownstreamError(errors.New("span ID and trace ID selectors cannot be combined; clear one of them"))
+				err := backend.DownstreamError(errors.New("cannot use span ID and trace ID simultaneously"))
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 				return err
