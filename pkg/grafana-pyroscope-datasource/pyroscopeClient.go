@@ -353,10 +353,13 @@ func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, lab
 		},
 	}
 
-	// SelectMergeSpanProfile is deprecated upstream in favour of SelectMergeStacktraces
-	// with span_selector, which the pinned api module now exposes as field 11. Migrating
-	// changes the code path for every existing Span ID user, so it is tracked separately
-	// rather than folded into the trace ID work.
+	// SelectMergeSpanProfile is deprecated upstream in favor of
+	// SelectMergeStacktraces with span_selector. Migrating changes the code path
+	// for every existing Span ID user, so it is tracked separately rather than
+	// folded into the trace ID work.
+	//
+	// See: https://github.com/grafana/grafana-pyroscope-datasource/issues/56
+	//
 	//nolint:staticcheck
 	resp, err := c.connectClient.SelectMergeSpanProfile(ctx, req)
 	if err != nil {
