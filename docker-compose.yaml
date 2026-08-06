@@ -12,3 +12,9 @@ services:
     depends_on:
       pyroscope:
         condition: service_started
+    # Grafana images ship their own core-bundled copy of grafana-pyroscope-datasource,
+    # and the plugin loader skips the copy mounted from ./dist as a duplicate
+    # ("Skipping loading of plugin as it's a duplicate"). Mask the core copy so the
+    # locally built plugin is the one Grafana loads, both locally and in CI e2e.
+    tmpfs:
+      - /usr/share/grafana/public/app/plugins/datasource/grafana-pyroscope-datasource
