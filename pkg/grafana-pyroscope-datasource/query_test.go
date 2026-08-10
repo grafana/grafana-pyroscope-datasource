@@ -116,7 +116,7 @@ func Test_query(t *testing.T) {
 		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","spanSelector":["64f170a95f537095"],"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
 		resp := ds.query(context.Background(), pCtx, *dataQuery)
 		require.Error(t, resp.Error)
-		require.Contains(t, resp.Error.Error(), "cannot be combined")
+		require.Contains(t, resp.Error.Error(), "cannot use span ID and trace ID simultaneously")
 	})
 
 	t.Run("query metrics ignores span and trace selectors", func(t *testing.T) {
