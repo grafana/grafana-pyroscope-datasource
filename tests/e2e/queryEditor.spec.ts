@@ -12,8 +12,12 @@ type ExploreOpts = {
   profileTypeId?: string;
   labelSelector?: string;
   queryType?: 'metrics' | 'profile' | 'both';
+  spanSelector?: string[];
+  traceIdSelector?: string[];
 };
 
+// Explore serialises the whole query object into the `panes` URL param, which is what
+// makes every query field deep-linkable without any URL handling in the plugin.
 function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
   const query: Record<string, unknown> = {
     refId: 'A',
@@ -21,7 +25,8 @@ function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
     labelSelector: opts.labelSelector ?? '{}',
     queryType: opts.queryType ?? 'both',
     groupBy: [],
-    spanSelector: [],
+    spanSelector: opts.spanSelector ?? [],
+    traceIdSelector: opts.traceIdSelector ?? [],
     includeExemplars: false,
   };
   if (opts.profileTypeId) {
@@ -113,8 +118,54 @@ test.describe('Query editor', () => {
       await expect(page.getByRole('radio', { name: 'Profile' })).toBeVisible();
       await expect(page.getByRole('radio', { name: 'Both' })).toBeVisible();
 
-      // Span ID is the most distinctively-named field; the placeholder text is part of the accessible name.
-      await expect(page.getByRole('textbox', { name: '64f170a95f537095' })).toBeVisible();
+      // Both selector inputs carry an id, so the wrapping Field label is their
+      // accessible name.
+      await expect(page.getByRole('textbox', { name: 'Trace ID' })).toBeVisible();
+      await expect(page.getByRole('textbox', { name: 'Span ID' })).toBeVisible();
+    });
+  });
+
+  test.describe('trace ID', () => {
+    const TRACE_ID = '7c9e66797425440de944be07fc1f90ae';
+    const SPAN_ID = '64f170a95f537095';
+
+    test('a trace ID in the Explore URL round-trips into the editor', async ({
+      page,
+      readProvisionedDataSource,
+    }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID] }));
+
+      // Options renders collapsed, so the summary has to advertise the trace ID without
+      // the user expanding anything — otherwise a deep link gives no sign it was applied.
+      await expect(page.getByText(`Trace ID: ${TRACE_ID}`)).toBeVisible();
+
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByRole('textbox', { name: 'Trace ID' })).toHaveValue(TRACE_ID);
+    });
+
+    test('the trace ID reaches the query request', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+
+      // The only cross-language check that src/dataquery.ts and the Go queryModel agree
+      // on the field name. A mismatch is dropped silently at unmarshal.
+      const requestPromise = page.waitForRequest(
+        (r) => r.url().includes('/api/ds/query') && r.method() === 'POST'
+      );
+      await page.goto(exploreUrl(ds.uid, { queryType: 'profile', profileTypeId: CPU_PROFILE, traceIdSelector: [TRACE_ID] }));
+
+      const payload = (await requestPromise).postDataJSON();
+      expect(payload.queries[0].traceIdSelector).toEqual([TRACE_ID]);
+    });
+
+    test('setting both Trace ID and Span ID surfaces a conflict error', async ({
+      page,
+      readProvisionedDataSource,
+    }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID], spanSelector: [SPAN_ID] }));
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByText(/cannot be used together/).first()).toBeVisible();
     });
   });
 

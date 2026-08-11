@@ -2,6 +2,7 @@ package pyroscope
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -97,6 +98,55 @@ func Test_query(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, []string{"app", "instance"}, groupBy)
 	})
+
+	t.Run("query profile forwards traceIdSelector", func(t *testing.T) {
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeProfile
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Nil(t, resp.Error)
+		traceIdSelector, ok := client.ProfileArgs[6].([]string)
+		require.True(t, ok)
+		require.Equal(t, []string{"7c9e66797425440de944be07fc1f90ae"}, traceIdSelector)
+	})
+
+	t.Run("query profile rejects span and trace selectors together", func(t *testing.T) {
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeProfile
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","spanSelector":["64f170a95f537095"],"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Error(t, resp.Error)
+		require.Contains(t, resp.Error.Error(), "cannot use span ID and trace ID simultaneously")
+	})
+
+	t.Run("query metrics ignores span and trace selectors", func(t *testing.T) {
+		// Neither selector applies to the metrics path, so a metrics query carrying
+		// both must still succeed. Reachable in the UI: switching Query Type to
+		// Metric leaves both fields populated.
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeMetrics
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","spanSelector":["64f170a95f537095"],"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"]}`)
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Nil(t, resp.Error)
+		require.Equal(t, 1, len(resp.Frames))
+		require.Equal(t, "time", resp.Frames[0].Fields[0].Name)
+	})
+}
+
+// Asserts the JSON tags on the selector family. src/dataquery.ts and
+// kinds/dataquery/types_dataquery.go are hand-maintained mirrors of each other,
+// and a mismatch is dropped silently at unmarshal: no compile error, no other
+// failing test, the query just runs as if the selector were never set.
+//
+// This is a Go-side check only; it cannot catch a typo on the TypeScript side.
+// The cross-language guard is the request-payload assertion in the e2e suite.
+func Test_queryModelSelectorJSONTags(t *testing.T) {
+	var qm queryModel
+	raw := []byte(`{"traceIdSelector":["7c9e66797425440de944be07fc1f90ae"],"spanSelector":["64f170a95f537095"],"profileIdSelector":["7c9e6679-7425-40de-944b-e07fc1f90ae7"]}`)
+	require.NoError(t, json.Unmarshal(raw, &qm))
+	require.Equal(t, []string{"7c9e66797425440de944be07fc1f90ae"}, qm.TraceIdSelector)
+	require.Equal(t, []string{"64f170a95f537095"}, qm.SpanSelector)
+	require.Equal(t, []string{"7c9e6679-7425-40de-944b-e07fc1f90ae7"}, qm.ProfileIdSelector)
 }
 
 func makeDataQuery() *backend.DataQuery {
@@ -593,6 +643,10 @@ func Test_seriesToDataFrame(t *testing.T) {
 
 type FakeClient struct {
 	Args []any
+	// Kept separate from Args: under queryTypeBoth, GetSeries and GetProfile run in
+	// parallel goroutines, so sharing one slice is a data race and would also make
+	// the metrics subtests' positional reads order-dependent.
+	ProfileArgs []any
 }
 
 func (f *FakeClient) ProfileTypes(ctx context.Context, start int64, end int64) ([]*ProfileType, error) {
@@ -616,7 +670,8 @@ func (f *FakeClient) LabelNames(ctx context.Context, labelSelector string, start
 	panic("implement me")
 }
 
-func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string) (*ProfileResponse, error) {
+func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string) (*ProfileResponse, error) {
+	f.ProfileArgs = []any{profileTypeID, labelSelector, start, end, maxNodes, profileIdSelector, traceIdSelector}
 	return &ProfileResponse{
 		Flamebearer: &Flamebearer{
 			Names: []string{"foo", "bar", "baz"},

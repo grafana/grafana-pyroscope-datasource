@@ -6,7 +6,7 @@ import { selectors } from '@grafana/e2e-selectors';
 
 import { PyroscopeDataSource } from '../datasource';
 import { mockFetchPyroscopeDatasourceSettings } from '../mocks';
-import { type ProfileTypeMessage } from '../types';
+import { type ProfileTypeMessage, type Query } from '../types';
 
 import { type Props, QueryEditor } from './QueryEditor';
 
@@ -133,6 +133,60 @@ describe('QueryEditor', () => {
     expect(screen.getByText(/Profile/)).toBeDefined();
     expect(screen.queryAllByText(/Both/).length).toBe(0);
   });
+
+  it('should render the Trace ID and Span ID fields', async () => {
+    setup();
+    await openOptions();
+    expect(screen.getByLabelText('Trace ID')).toBeDefined();
+    expect(screen.getByLabelText('Span ID')).toBeDefined();
+  });
+
+  it('should show an existing traceIdSelector value', async () => {
+    setup({ props: { query: { ...baseQuery, traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'] } } });
+    await openOptions();
+    expect(screen.getByLabelText('Trace ID')).toHaveValue('7c9e66797425440de944be07fc1f90ae');
+  });
+
+  it('should show an existing spanSelector value', async () => {
+    setup({ props: { query: { ...baseQuery, spanSelector: ['64f170a95f537095'] } } });
+    await openOptions();
+    expect(screen.getByLabelText('Span ID')).toHaveValue('64f170a95f537095');
+  });
+
+  // userEvent.paste rather than type: the Input is controlled by a `query` prop that
+  // never updates here, so type() would fire one onChange per keystroke, each carrying
+  // a single character.
+  it('should emit traceIdSelector when a trace ID is entered', async () => {
+    const { onChange } = setup();
+    await openOptions();
+    await userEvent.click(screen.getByLabelText('Trace ID'));
+    await userEvent.paste('7c9e66797425440de944be07fc1f90ae');
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'] })
+    );
+  });
+
+  it('should emit spanSelector when a span ID is entered', async () => {
+    const { onChange } = setup();
+    await openOptions();
+    await userEvent.click(screen.getByLabelText('Span ID'));
+    await userEvent.paste('64f170a95f537095');
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ spanSelector: ['64f170a95f537095'] }));
+  });
+
+  it('should show a conflict error when both Trace ID and Span ID are set', async () => {
+    setup({
+      props: {
+        query: {
+          ...baseQuery,
+          traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'],
+          spanSelector: ['64f170a95f537095'],
+        },
+      },
+    });
+    await openOptions();
+    expect(screen.getAllByText(/cannot be used together/).length).toBeGreaterThan(0);
+  });
 });
 
 async function openOptions() {
@@ -188,22 +242,24 @@ function setupDs() {
   return ds;
 }
 
+const baseQuery: Query = {
+  queryType: 'both',
+  labelSelector: '',
+  profileTypeId: 'process_cpu:cpu',
+  refId: 'A',
+  maxNodes: 1000,
+  groupBy: [],
+  limit: 42,
+  includeExemplars: false,
+  includeHeatmap: false,
+  heatmapType: 'individual',
+};
+
 function setup(options: { props: Partial<Props> } = { props: {} }) {
   const onChange = jest.fn();
   const utils = render(
     <QueryEditor
-      query={{
-        queryType: 'both',
-        labelSelector: '',
-        profileTypeId: 'process_cpu:cpu',
-        refId: 'A',
-        maxNodes: 1000,
-        groupBy: [],
-        limit: 42,
-        includeExemplars: false,
-        includeHeatmap: false,
-        heatmapType: 'individual',
-      }}
+      query={baseQuery}
       datasource={setupDs()}
       onChange={onChange}
       onRunQuery={() => {}}

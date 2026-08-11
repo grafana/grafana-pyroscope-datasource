@@ -303,8 +303,8 @@ func (c *PyroscopeClient) GetHeatmap(ctx context.Context, profileTypeID string, 
 	}, nil
 }
 
-func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string) (*ProfileResponse, error) {
-	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector)))
+func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string) (*ProfileResponse, error) {
+	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector), attribute.String("traceIdSelector", strings.Join(traceIdSelector, ","))))
 	defer span.End()
 	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
 		Msg: &querierv1.SelectMergeStacktracesRequest{
@@ -314,6 +314,7 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 			End:               end,
 			MaxNodes:          maxNodes,
 			ProfileIdSelector: profileIdSelector,
+			TraceIdSelector:   traceIdSelector,
 		},
 	}
 
@@ -321,6 +322,12 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
+		// Pyroscope requires trace IDs to be exactly 32 hex characters, so pasting a
+		// 16-hex span ID into the Trace ID field lands here. Surface something the
+		// user can act on instead of a bare connect error.
+		if len(traceIdSelector) > 0 && connect.CodeOf(err) == connect.CodeInvalidArgument {
+			return nil, backend.DownstreamError(fmt.Errorf("the Pyroscope server rejected the trace ID (it must be exactly 32 hex characters): %w", err))
+		}
 		return nil, backend.DownstreamError(fmt.Errorf("received error from client while getting profile: %w", err))
 	}
 
@@ -346,6 +353,14 @@ func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, lab
 		},
 	}
 
+	// SelectMergeSpanProfile is deprecated upstream in favor of
+	// SelectMergeStacktraces with span_selector. Migrating changes the code path
+	// for every existing Span ID user, so it is tracked separately rather than
+	// folded into the trace ID work.
+	//
+	// See: https://github.com/grafana/grafana-pyroscope-datasource/issues/56
+	//
+	//nolint:staticcheck
 	resp, err := c.connectClient.SelectMergeSpanProfile(ctx, req)
 	if err != nil {
 		span.RecordError(err)

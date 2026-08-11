@@ -71,6 +71,9 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
             queryType: 'both',
             groupBy: [],
             spanSelector: [],
+            // Must stay empty: a real trace ID would filter the probe query down to
+            // nothing and it would never see the two frames it waits for.
+            traceIdSelector: [],
             includeExemplars: false,
           },
         ],

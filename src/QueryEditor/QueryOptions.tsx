@@ -45,6 +45,13 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
       }))
     : [];
 
+  const spanId = query.spanSelector?.[0] ?? '';
+  const traceId = query.traceIdSelector?.[0] ?? '';
+  // Pyroscope rejects a request that sets both, so flag it in the editor rather than
+  // waiting for the query to come back with an error.
+  const selectorConflict = spanId !== '' && traceId !== '';
+  const selectorConflictError = 'Trace ID and Span ID cannot be used together. Clear one of them.';
+
   let collapsedInfo = [`Type: ${query.queryType}`];
   if (query.groupBy?.length) {
     collapsedInfo.push(`Group by: ${query.groupBy.join(', ')}`);
@@ -52,8 +59,16 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
   if (query.limit) {
     collapsedInfo.push(`Limit: ${query.limit}`);
   }
+  if (query.traceIdSelector?.length) {
+    collapsedInfo.push(`Trace ID: ${query.traceIdSelector.join(', ')}`);
+  }
   if (query.spanSelector?.length) {
     collapsedInfo.push(`Span ID: ${query.spanSelector.join(', ')}`);
+  }
+  if (selectorConflict) {
+    // Options renders collapsed by default, so without this a deep link carrying both
+    // selectors would fail with nothing on screen to explain why.
+    collapsedInfo.push(selectorConflictError);
   }
   if (query.maxNodes) {
     collapsedInfo.push(`Max nodes: ${query.maxNodes}`);
@@ -117,16 +132,47 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               }}
             />
           </EditorField>
-          <EditorField label={'Span ID'} tooltip={<>Sets the span ID from which to search for profiles.</>}>
+          <EditorField
+            label={'Trace ID'}
+            tooltip={
+              <>
+                Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.
+              </>
+            }
+            invalid={selectorConflict}
+            error={selectorConflict ? selectorConflictError : undefined}
+            validationMessageHorizontalOverflow
+          >
             <Input
-              value={query.spanSelector || ['']}
+              id="pyroscope-trace-id"
+              value={traceId}
+              type="string"
+              placeholder="7c9e66797425440de944be07fc1f90ae"
+              onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
+                const value = event.currentTarget.value.trim();
+                onQueryChange({ ...query, traceIdSelector: value !== '' ? [value] : [] });
+              }}
+            />
+          </EditorField>
+          <EditorField
+            label={'Span ID'}
+            tooltip={
+              <>
+                Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.
+              </>
+            }
+            invalid={selectorConflict}
+            error={selectorConflict ? selectorConflictError : undefined}
+            validationMessageHorizontalOverflow
+          >
+            <Input
+              id="pyroscope-span-id"
+              value={spanId}
               type="string"
               placeholder="64f170a95f537095"
               onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
-                onQueryChange({
-                  ...query,
-                  spanSelector: event.currentTarget.value !== '' ? [event.currentTarget.value] : [],
-                });
+                const value = event.currentTarget.value.trim();
+                onQueryChange({ ...query, spanSelector: value !== '' ? [value] : [] });
               }}
             />
           </EditorField>

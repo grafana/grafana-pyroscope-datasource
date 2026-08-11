@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/grafana/grafana-plugin-sdk-go v0.294.0
-	github.com/grafana/pyroscope/api v1.5.0
+	github.com/grafana/pyroscope/api v1.5.1-0.20260730112731-788a581f23db
 	github.com/magefile/mage v1.17.2
 	github.com/prometheus/prometheus v0.313.1
 	github.com/stretchr/testify v1.11.1

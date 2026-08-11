@@ -3,6 +3,7 @@ package pyroscope
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -145,6 +146,17 @@ func (d *PyroscopeDatasource) query(ctx context.Context, pCtx backend.PluginCont
 
 	if query.QueryType == queryTypeProfile || query.QueryType == queryTypeBoth {
 		g.Go(func() error {
+			// Pyroscope rejects a request carrying both selectors, and the span path
+			// uses an RPC that has no trace field at all, so silently preferring one
+			// would drop the other. Fail loudly instead. Checked here rather than at
+			// the top of query() because neither selector applies to the metrics path.
+			if len(qm.SpanSelector) > 0 && len(qm.TraceIdSelector) > 0 {
+				err := backend.DownstreamError(errors.New("cannot use span ID and trace ID simultaneously"))
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return err
+			}
+
 			var profileResp *ProfileResponse
 			if len(qm.SpanSelector) > 0 {
 				logger.Debug("Calling GetSpanProfile", "queryModel", qm, "function", logEntrypoint())
@@ -158,7 +170,7 @@ func (d *PyroscopeDatasource) query(ctx context.Context, pCtx backend.PluginCont
 				profileResp = prof
 			} else {
 				logger.Debug("Calling GetProfile", "queryModel", qm, "function", logEntrypoint())
-				prof, err := d.client.GetProfile(gCtx, profileTypeId, labelSelector, query.TimeRange.From.UnixMilli(), query.TimeRange.To.UnixMilli(), qm.MaxNodes, qm.ProfileIdSelector)
+				prof, err := d.client.GetProfile(gCtx, profileTypeId, labelSelector, query.TimeRange.From.UnixMilli(), query.TimeRange.To.UnixMilli(), qm.MaxNodes, qm.ProfileIdSelector, qm.TraceIdSelector)
 				if err != nil {
 					span.RecordError(err)
 					span.SetStatus(codes.Error, err.Error())

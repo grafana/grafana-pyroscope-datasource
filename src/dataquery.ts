@@ -62,6 +62,10 @@ export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
    * Specifies the query span selectors.
    */
   spanSelector?: string[];
+  /**
+   * Specifies the query trace id selectors.
+   */
+  traceIdSelector?: string[];
 }
 
 export const defaultGrafanaPyroscopeDataQuery: Partial<GrafanaPyroscopeDataQuery> = {
@@ -72,4 +76,5 @@ export const defaultGrafanaPyroscopeDataQuery: Partial<GrafanaPyroscopeDataQuery
   labelSelector: '{}',
   profileIdSelector: [],
   spanSelector: [],
+  traceIdSelector: [],
 };
