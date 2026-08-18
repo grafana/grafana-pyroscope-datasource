@@ -62,6 +62,11 @@ export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
    * Specifies the query span selectors.
    */
   spanSelector?: string[];
+  /**
+   * Selects only the stack traces going through this call site, given as function names from the root down. Lets a
+   * client fetch one subtree of a profile at full detail.
+   */
+  stackTraceSelector?: string[];
 }
 
 export const defaultGrafanaPyroscopeDataQuery: Partial<GrafanaPyroscopeDataQuery> = {

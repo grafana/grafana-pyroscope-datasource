@@ -53,7 +53,7 @@ func Test_PyroscopeClient(t *testing.T) {
 
 	t.Run("GetProfile", func(t *testing.T) {
 		maxNodes := int64(-1)
-		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil)
+		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil)
 		require.Nil(t, err)
 
 		series := &ProfileResponse{
@@ -75,7 +75,7 @@ func Test_PyroscopeClient(t *testing.T) {
 	t.Run("GetProfile with empty response", func(t *testing.T) {
 		connectClient.SendEmptyProfileResponse = true
 		maxNodes := int64(-1)
-		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil)
+		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil)
 		require.Nil(t, err)
 		// Mainly ensuring this does not panic like before
 		require.Nil(t, resp)
@@ -85,12 +85,38 @@ func Test_PyroscopeClient(t *testing.T) {
 	t.Run("GetProfile passes profileIdSelector to request", func(t *testing.T) {
 		maxNodes := int64(-1)
 		selector := []string{"id1", "id2"}
-		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, selector)
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, selector, nil)
 		require.Nil(t, err)
 
 		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
 		require.True(t, ok)
 		require.Equal(t, selector, req.Msg.ProfileIdSelector)
+	})
+
+	t.Run("GetProfile turns a call site into a stack trace selector", func(t *testing.T) {
+		maxNodes := int64(-1)
+		callSite := []string{"total", "main.main", "main.work"}
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, callSite)
+		require.Nil(t, err)
+
+		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
+		require.True(t, ok)
+		require.NotNil(t, req.Msg.StackTraceSelector)
+		names := make([]string, 0, len(req.Msg.StackTraceSelector.CallSite))
+		for _, location := range req.Msg.StackTraceSelector.CallSite {
+			names = append(names, location.Name)
+		}
+		require.Equal(t, callSite, names)
+	})
+
+	t.Run("GetProfile leaves the stack trace selector unset without a call site", func(t *testing.T) {
+		maxNodes := int64(-1)
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil)
+		require.Nil(t, err)
+
+		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
+		require.True(t, ok)
+		require.Nil(t, req.Msg.StackTraceSelector)
 	})
 
 	ctxWithToggle := config.WithGrafanaConfig(context.Background(), config.NewGrafanaCfg(map[string]string{
