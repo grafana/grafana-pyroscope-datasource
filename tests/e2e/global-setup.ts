@@ -1,5 +1,7 @@
 import { request, type FullConfig } from '@playwright/test';
 
+import { isCloudRun } from './env';
+
 const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
 const PROVISIONED_DS_UID = 'pyroscope-test';
 const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
@@ -23,6 +25,10 @@ const POLL_TIMEOUT_MS = 240_000;
  * every worker starts against a stable backend.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  if (isCloudRun) {
+    return;
+  }
+
   const baseURL = config.projects[0]?.use.baseURL || process.env.GRAFANA_URL || 'http://localhost:3000';
   const grafanaUser = process.env.GRAFANA_ADMIN_USER || 'admin';
   const grafanaPass = process.env.GRAFANA_ADMIN_PASSWORD || 'admin';

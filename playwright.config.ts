@@ -2,6 +2,8 @@ import type { PluginOptions } from '@grafana/plugin-e2e';
 import { defineConfig, devices } from '@playwright/test';
 import { dirname } from 'node:path';
 
+import { isCloudRun } from './tests/e2e/env';
+
 const pluginE2eAuth = `${dirname(require.resolve('@grafana/plugin-e2e'))}/auth`;
 
 /**
@@ -15,6 +17,11 @@ const pluginE2eAuth = `${dirname(require.resolve('@grafana/plugin-e2e'))}/auth`;
  */
 export default defineConfig<PluginOptions>({
   testDir: './tests/e2e',
+  timeout: isCloudRun ? 90_000 : 30_000,
+  expect: {
+    timeout: isCloudRun ? 30_000 : 5_000,
+  },
+  workers: isCloudRun ? 1 : undefined,
   /* Run a one-shot Pyroscope warmup before any worker spawns. See the script
    * for full motivation – TL;DR: Pyroscope's first profile responses can be
    * empty for ~10–60s after the container starts, and the query editor caches
