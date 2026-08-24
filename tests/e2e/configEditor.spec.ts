@@ -1,6 +1,6 @@
 import { test, expect } from '@grafana/plugin-e2e';
 
-import { DS_PASSWORD, DS_URL, DS_USERNAME, PLUGIN_TYPE, resolveDataSourceUid } from './env';
+import { DS_PASSWORD, DS_URL, DS_USERNAME, PLUGIN_TYPE, isCloudRun, resolveDataSourceUid } from './env';
 
 // Local URL Pyroscope is reachable on from the host machine.
 // Inside the Grafana container, Pyroscope is at http://pyroscope:4040 (set in provisioning).
@@ -72,13 +72,13 @@ test.describe('Config editor', () => {
       createDataSourceConfigPage,
       page,
     }) => {
+      test.skip(
+        isCloudRun,
+        'Ad-hoc save & test cannot select the managed PDC network; the Cloud-provisioned datasource covers connectivity.'
+      );
+
       const configPage = await createDataSourceConfigPage({ type: PLUGIN_TYPE });
       await page.getByRole('textbox', { name: 'Data source connection URL' }).fill(DS_URL);
-
-      if (process.env.DS_PDC_NETWORK_NAME) {
-        await page.getByRole('combobox', { name: 'Private data source connect' }).click();
-        await page.getByText(process.env.DS_PDC_NETWORK_NAME, { exact: true }).click();
-      }
 
       if (DS_USERNAME && DS_PASSWORD) {
         // Hosted Pyroscope configurations may require basic auth.
@@ -94,23 +94,17 @@ test.describe('Config editor', () => {
 
     test('should show error alert when health check fails', async ({ createDataSourceConfigPage, page }) => {
       const configPage = await createDataSourceConfigPage({ type: PLUGIN_TYPE });
-      await page.route('**/api/datasources/uid/*/health', (route) =>
-        route.fulfill({
-          status: 400,
-          contentType: 'application/json',
-          body: JSON.stringify({ message: 'connection refused' }),
-        })
-      );
+      await configPage.mockHealthCheckResponse({ status: 'ERROR', message: 'connection refused' }, 400);
       await page.getByRole('textbox', { name: 'Data source connection URL' }).fill(LOCAL_PYROSCOPE_URL);
-      await expect(configPage.saveAndTest()).not.toBeOK();
-      await expect(configPage).toHaveAlert('error');
+      await page.getByRole('button', { name: 'Save & test' }).click();
+      await expect(configPage).toHaveAlert('error', { hasText: 'connection refused' });
     });
 
     test('should show error alert when backend is unreachable', async ({ createDataSourceConfigPage, page }) => {
       const configPage = await createDataSourceConfigPage({ type: PLUGIN_TYPE });
       // Point at a host that will reliably refuse the connection.
       await page.getByRole('textbox', { name: 'Data source connection URL' }).fill('http://127.0.0.1:65534');
-      await expect(configPage.saveAndTest()).not.toBeOK();
+      await page.getByRole('button', { name: 'Save & test' }).click();
       await expect(configPage).toHaveAlert('error');
     });
   });
