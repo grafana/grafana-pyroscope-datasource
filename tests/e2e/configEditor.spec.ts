@@ -93,6 +93,11 @@ test.describe('Config editor', () => {
     });
 
     test('should show error alert when health check fails', async ({ createDataSourceConfigPage, page }) => {
+      test.skip(
+        isCloudRun,
+        'Mocks the local health endpoint; Cloud error handling is covered by the unreachable test.'
+      );
+
       const configPage = await createDataSourceConfigPage({ type: PLUGIN_TYPE });
       await configPage.mockHealthCheckResponse({ status: 'ERROR', message: 'connection refused' }, 400);
       await page.getByRole('textbox', { name: 'Data source connection URL' }).fill(LOCAL_PYROSCOPE_URL);
