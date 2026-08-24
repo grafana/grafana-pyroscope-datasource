@@ -19,24 +19,9 @@ function requireOnCloud(name: string, localDefault: string): string {
   return localDefault;
 }
 
-const DS_HOST = requireOnCloud('DS_INSTANCE_HOST', 'pyroscope');
-const DS_PORT = requireOnCloud('DS_INSTANCE_PORT', '4040');
-
-export const DS_USERNAME = requireOnCloud('DS_INSTANCE_USERNAME', '');
-export const DS_PASSWORD = requireOnCloud('DS_INSTANCE_PASSWORD', '');
-
-function buildDataSourceUrl(): string {
-  if (!isCloudRun) {
-    return 'http://pyroscope:4040';
-  }
-
-  const url = new URL('https://pyroscope.invalid');
-  url.hostname = DS_HOST;
-  url.port = DS_PORT === '443' ? '' : DS_PORT;
-  return url.origin;
-}
-
-export const DS_URL = buildDataSourceUrl();
+export const DS_URL = requireOnCloud('DS_INSTANCE_URL', 'http://pyroscope:4040');
+export const DS_USERNAME = process.env.DS_INSTANCE_USERNAME?.trim() ?? '';
+export const DS_PASSWORD = process.env.DS_INSTANCE_PASSWORD?.trim() ?? '';
 
 const LOCAL_DS_UID = 'pyroscope-test';
 

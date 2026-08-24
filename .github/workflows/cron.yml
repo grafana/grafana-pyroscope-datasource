@@ -20,13 +20,13 @@ jobs:
       id-token: write
     with:
       run-stage: nightly
+      # The self-hosted Pyroscope service is reachable from the shared Cloud
+      # instance through the AWS PDC network.
+      pdc-network-name: datasources-pdc-network-aws-datasourcese2e
       # Paths are relative to ci/repo/grafana/grafana-pyroscope-datasource/ —
       # get-vault-secrets prepends that prefix for `repo_secrets`.
       repo-secrets: |
-        DS_INSTANCE_HOST=pyroscope:json_host
-        DS_INSTANCE_PASSWORD=pyroscope:secure_password
-        DS_INSTANCE_PORT=pyroscope:json_port
-        DS_INSTANCE_USERNAME=pyroscope:json_username
+        DS_INSTANCE_URL=pyroscope:url
 
   notify-slack:
     name: Notify Slack on failure

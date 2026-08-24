@@ -1,9 +1,8 @@
-import { request, type FullConfig } from '@playwright/test';
+import { request, type APIRequestContext, type FullConfig } from '@playwright/test';
 
-import { isCloudRun } from './env';
+import { DS_URL, isCloudRun, PLUGIN_TYPE } from './env';
 
-const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
-const PROVISIONED_DS_UID = 'pyroscope-test';
+const LOCAL_DS_UID = 'pyroscope-test';
 const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
 const POLL_INTERVAL_MS = 1000;
 // Generous budget so cold starts under resource pressure (e.g. emulated amd64
@@ -25,10 +24,6 @@ const POLL_TIMEOUT_MS = 240_000;
  * every worker starts against a stable backend.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
-  if (isCloudRun) {
-    return;
-  }
-
   const baseURL = config.projects[0]?.use.baseURL || process.env.GRAFANA_URL || 'http://localhost:3000';
   const grafanaUser = process.env.GRAFANA_ADMIN_USER || 'admin';
   const grafanaPass = process.env.GRAFANA_ADMIN_PASSWORD || 'admin';
@@ -39,6 +34,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       Authorization: 'Basic ' + Buffer.from(`${grafanaUser}:${grafanaPass}`).toString('base64'),
     },
   });
+  const dataSourceUid = isCloudRun ? await resolveCloudDataSourceUid(ctx) : LOCAL_DS_UID;
 
   const start = Date.now();
   // eslint-disable-next-line no-console
@@ -48,7 +44,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const profileTypesReady = await pollUntil(POLL_TIMEOUT_MS, async () => {
     const now = Date.now();
     const resp = await ctx.get(
-      `/api/datasources/uid/${PROVISIONED_DS_UID}/resources/profileTypes?start=${now - 15 * 60 * 1000}&end=${now}`
+      `/api/datasources/uid/${dataSourceUid}/resources/profileTypes?start=${now - 15 * 60 * 1000}&end=${now}`
     );
     if (!resp.ok()) {
       return false;
@@ -71,7 +67,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
         queries: [
           {
             refId: 'A',
-            datasource: { type: PLUGIN_TYPE, uid: PROVISIONED_DS_UID },
+            datasource: { type: PLUGIN_TYPE, uid: dataSourceUid },
             profileTypeId: CPU_PROFILE,
             labelSelector: '{}',
             queryType: 'both',
@@ -98,6 +94,36 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
   // eslint-disable-next-line no-console
   console.log(`[global-setup] Pyroscope warm in ${Date.now() - start}ms`);
+}
+
+async function resolveCloudDataSourceUid(ctx: APIRequestContext): Promise<string> {
+  const response = await ctx.get('/api/datasources');
+  if (!response.ok()) {
+    throw new Error(`global-setup: could not list data sources: HTTP ${response.status()}`);
+  }
+
+  const candidates: Array<{ name: string; uid: string; url: string }> = (await response.json()).filter(
+    (dataSource: { type: string }) => dataSource.type === PLUGIN_TYPE
+  );
+  const expectedOrigin = new URL(DS_URL).origin;
+  const exactMatch = candidates.find((dataSource) => {
+    try {
+      return new URL(dataSource.url).origin === expectedOrigin;
+    } catch {
+      return false;
+    }
+  });
+  if (exactMatch) {
+    return exactMatch.uid;
+  }
+  if (candidates.length === 1) {
+    return candidates[0].uid;
+  }
+
+  throw new Error(
+    `global-setup: could not resolve the Cloud Pyroscope data source for ${expectedOrigin}; ` +
+      `found ${candidates.length} candidate(s)`
+  );
 }
 
 async function pollUntil(timeoutMs: number, predicate: () => Promise<boolean>): Promise<boolean> {

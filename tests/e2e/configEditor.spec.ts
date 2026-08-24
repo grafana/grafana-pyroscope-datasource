@@ -75,8 +75,13 @@ test.describe('Config editor', () => {
       const configPage = await createDataSourceConfigPage({ type: PLUGIN_TYPE });
       await page.getByRole('textbox', { name: 'Data source connection URL' }).fill(DS_URL);
 
+      if (process.env.DS_PDC_NETWORK_NAME) {
+        await page.getByRole('combobox', { name: 'Private data source connect' }).click();
+        await page.getByText(process.env.DS_PDC_NETWORK_NAME, { exact: true }).click();
+      }
+
       if (DS_USERNAME && DS_PASSWORD) {
-        // Cloud Pyroscope requires basic auth (stack id / API token).
+        // Hosted Pyroscope configurations may require basic auth.
         await page.getByRole('combobox', { name: 'Authentication method' }).click();
         await page.getByRole('option', { name: 'Basic authentication' }).click();
         await page.getByLabel('User *', { exact: true }).fill(DS_USERNAME);
