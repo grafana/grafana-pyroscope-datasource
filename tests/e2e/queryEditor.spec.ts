@@ -1,6 +1,6 @@
 import { test, expect, type ExplorePage } from '@grafana/plugin-e2e';
 
-const PLUGIN_TYPE = 'grafana-pyroscope-datasource';
+import { isCloudRun, PLUGIN_TYPE, resolveDataSourceUid } from './env';
 
 // Use a tight, recent time window so tests work both locally (after `npm run server`)
 // and in CI, where Pyroscope starts fresh and needs ~1 minute to begin self-profiling.
@@ -47,7 +47,16 @@ const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
 // Read /api/ds/query response bodies inside the predicate to avoid CDP buffer eviction.
 // TODO: remove once @grafana/plugin-e2e exposes body reading natively.
 function waitForQueryDataResponseWithBody(explorePage: ExplorePage) {
-  let body: { results?: Record<string, { status?: number; frames?: Array<{ schema?: { name?: string; meta?: { preferredVisualisationType?: string } } }>; error?: string }> } | null = null;
+  let body: {
+    results?: Record<
+      string,
+      {
+        status?: number;
+        frames?: Array<{ schema?: { name?: string; meta?: { preferredVisualisationType?: string } } }>;
+        error?: string;
+      }
+    >;
+  } | null = null;
   const responsePromise = explorePage.waitForQueryDataResponse(async (r) => {
     if (!r.ok()) {
       return false;
@@ -64,23 +73,17 @@ function waitForQueryDataResponseWithBody(explorePage: ExplorePage) {
 
 test.describe('Query editor', () => {
   test.describe('rendering', () => {
-    test(
-      'smoke: should render query editor',
-      { tag: '@plugins' },
-      async ({ page, readProvisionedDataSource }) => {
-        const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-        await page.goto(exploreUrl(ds.uid));
-        // The profile-type cascader is the most distinctive element of the editor.
-        // The cascader input only exposes a `placeholder`, so use `getByPlaceholder`
-        // — `getByRole('textbox', { name })` doesn't include placeholder in the
-        // computed accessible name on Grafana <= 13.0 (different host wrapper).
-        await expect(page.getByPlaceholder('Select profile type')).toBeVisible();
-      }
-    );
+    test('smoke: should render query editor', { tag: '@plugins' }, async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
+      // The profile-type cascader is the most distinctive element of the editor.
+      // The cascader input only exposes a `placeholder`, so use `getByPlaceholder`
+      // — `getByRole('textbox', { name })` doesn't include placeholder in the
+      // computed accessible name on Grafana <= 13.0 (different host wrapper).
+      await expect(page.getByPlaceholder('Select profile type')).toBeVisible();
+    });
 
-    test('should render the profile type cascader', async ({ page, readProvisionedDataSource }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid));
+    test('should render the profile type cascader', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
       const cascader = page.getByPlaceholder('Select profile type');
       await expect(cascader).toBeVisible();
       // The plugin auto-selects a default profile type after profileTypes load
@@ -88,24 +91,18 @@ test.describe('Query editor', () => {
       await expect(cascader).not.toHaveValue('');
     });
 
-    test('should render the label selector (Monaco) editor', async ({ page, readProvisionedDataSource }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid));
+    test('should render the label selector (Monaco) editor', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
       await expect(page.getByRole('textbox', { name: /Editor content/ })).toBeVisible();
     });
 
-    test('should render the Options collapser', async ({ page, readProvisionedDataSource }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid));
+    test('should render the Options collapser', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
       await expect(page.getByRole('button', { name: /^Options/ })).toBeVisible();
     });
 
-    test('should reveal all query options when Options is expanded', async ({
-      page,
-      readProvisionedDataSource,
-    }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid));
+    test('should reveal all query options when Options is expanded', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
       await page.getByRole('button', { name: /^Options/ }).click();
 
       // Query Type radios — "Both" only appears in Explore (CoreApp.Explore).
@@ -122,24 +119,21 @@ test.describe('Query editor', () => {
     // Grafana's RadioButtonGroup renders as <input type="radio"> wrapped in a styled label.
     // `toBeChecked()` recursively retries through the flamegraph DOM and overflows the stack;
     // asserting on the `checked` filter via `getByRole` is reliable.
-    test('"Both" mode is selected by default in Explore', async ({ page, readProvisionedDataSource }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid, { queryType: 'both' }));
+    test('"Both" mode is selected by default in Explore', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page), { queryType: 'both' }));
       await page.getByRole('button', { name: /^Options/ }).click();
       await expect(page.getByRole('radio', { name: 'Both', checked: true })).toBeVisible();
     });
 
-    test('clicking "Metric" radio selects metrics mode', async ({ page, readProvisionedDataSource }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid));
+    test('clicking "Metric" radio selects metrics mode', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
       await page.getByRole('button', { name: /^Options/ }).click();
       await page.getByRole('radio', { name: 'Metric' }).click();
       await expect(page.getByRole('radio', { name: 'Metric', checked: true })).toBeVisible();
     });
 
-    test('clicking "Profile" radio selects profile mode', async ({ page, readProvisionedDataSource }) => {
-      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
-      await page.goto(exploreUrl(ds.uid));
+    test('clicking "Profile" radio selects profile mode', async ({ page }) => {
+      await page.goto(exploreUrl(await resolveDataSourceUid(page)));
       await page.getByRole('button', { name: /^Options/ }).click();
       await page.getByRole('radio', { name: 'Profile' }).click();
       await expect(page.getByRole('radio', { name: 'Profile', checked: true })).toBeVisible();
@@ -148,6 +142,10 @@ test.describe('Query editor', () => {
 });
 
 test.describe('Query editor with fixture data', () => {
+  test.beforeEach(() => {
+    test.skip(isCloudRun, 'Relies on self-profile data from the local Pyroscope container.');
+  });
+
   // Pyroscope self-profiles on startup, so a live container always has profile data
   // for service_name=pyroscope. These tests verify the data source surfaces that data
   // correctly. Run serially to avoid hammering the backend in parallel.
@@ -174,11 +172,7 @@ test.describe('Query editor with fixture data', () => {
     expect(visualisations).toEqual(expect.arrayContaining(['graph', 'flamegraph']));
   });
 
-  test('"metrics" query returns only a time series frame', async ({
-    page,
-    explorePage,
-    readProvisionedDataSource,
-  }) => {
+  test('"metrics" query returns only a time series frame', async ({ page, explorePage, readProvisionedDataSource }) => {
     const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
     const { responsePromise, getBody } = waitForQueryDataResponseWithBody(explorePage);
     await page.goto(exploreUrl(ds.uid, { queryType: 'metrics', profileTypeId: CPU_PROFILE }));
@@ -195,11 +189,7 @@ test.describe('Query editor with fixture data', () => {
     expect(visualisations).not.toContain('flamegraph');
   });
 
-  test('"profile" query returns only a flamegraph frame', async ({
-    page,
-    explorePage,
-    readProvisionedDataSource,
-  }) => {
+  test('"profile" query returns only a flamegraph frame', async ({ page, explorePage, readProvisionedDataSource }) => {
     const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
     const { responsePromise, getBody } = waitForQueryDataResponseWithBody(explorePage);
     await page.goto(exploreUrl(ds.uid, { queryType: 'profile', profileTypeId: CPU_PROFILE }));
@@ -216,10 +206,7 @@ test.describe('Query editor with fixture data', () => {
     expect(visualisations).not.toContain('graph');
   });
 
-  test('profileTypes resource endpoint returns the available types', async ({
-    page,
-    readProvisionedDataSource,
-  }) => {
+  test('profileTypes resource endpoint returns the available types', async ({ page, readProvisionedDataSource }) => {
     const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
 
     type ProfileType = { name?: string; id?: string };
