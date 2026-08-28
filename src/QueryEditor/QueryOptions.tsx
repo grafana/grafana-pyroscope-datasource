@@ -47,15 +47,20 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
 
   const spanId = query.spanSelector?.[0] ?? '';
   const traceId = query.traceIdSelector?.[0] ?? '';
+  // Neither selector reaches the metrics path: the backend passes them only to the
+  // profile RPCs, so on a metrics query they are inert and flagging a conflict would
+  // mark a query the server happily accepts as broken. `both` still runs the profile
+  // leg, which does enforce the conflict, so only `metrics` opts out.
+  const selectorsApply = query.queryType !== 'metrics';
   // Pyroscope rejects a request that sets both, so flag it in the editor rather than
   // waiting for the query to come back with an error.
-  const selectorConflict = spanId !== '' && traceId !== '';
+  const selectorConflict = selectorsApply && spanId !== '' && traceId !== '';
   const selectorConflictError = 'Trace ID and Span ID cannot be used together. Clear one of them.';
   // Pyroscope only accepts a 128-bit W3C trace ID, so a pasted 16-hex span ID is a
   // guaranteed server-side rejection. Flag it before the query is sent. A value holding
   // a template variable is left alone, since it only resolves at query time.
   const traceIdFormatError =
-    traceId !== '' && !traceId.includes('$') && !/^[0-9a-fA-F]{32}$/.test(traceId)
+    selectorsApply && traceId !== '' && !traceId.includes('$') && !/^[0-9a-fA-F]{32}$/.test(traceId)
       ? 'Trace ID must be exactly 32 hexadecimal characters.'
       : undefined;
 
@@ -66,10 +71,10 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
   if (query.limit) {
     collapsedInfo.push(`Limit: ${query.limit}`);
   }
-  if (query.traceIdSelector?.length) {
+  if (selectorsApply && query.traceIdSelector?.length) {
     collapsedInfo.push(`Trace ID: ${query.traceIdSelector.join(', ')}`);
   }
-  if (query.spanSelector?.length) {
+  if (selectorsApply && query.spanSelector?.length) {
     collapsedInfo.push(`Span ID: ${query.spanSelector.join(', ')}`);
   }
   if (selectorConflict) {
@@ -143,55 +148,52 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               }}
             />
           </EditorField>
-          <EditorField
-            label={'Trace ID'}
-            tooltip={
-              <>
-                Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.
-              </>
-            }
-            invalid={selectorConflict || traceIdFormatError !== undefined}
-            error={traceIdFormatError}
-          >
-            <Input
-              id="pyroscope-trace-id"
-              value={traceId}
-              type="string"
-              placeholder="7c9e66797425440de944be07fc1f90ae"
-              onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
-                const value = event.currentTarget.value.trim();
-                onQueryChange({ ...query, traceIdSelector: value !== '' ? [value] : [] });
-              }}
-            />
-          </EditorField>
-          <EditorField
-            label={'Span ID'}
-            tooltip={
-              <>
-                Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.
-              </>
-            }
-            invalid={selectorConflict}
-          >
-            <Input
-              id="pyroscope-span-id"
-              value={spanId}
-              type="string"
-              placeholder="64f170a95f537095"
-              onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
-                const value = event.currentTarget.value.trim();
-                onQueryChange({ ...query, spanSelector: value !== '' ? [value] : [] });
-              }}
-            />
-          </EditorField>
-          {selectorConflict && (
-            // Rendered once for the pair rather than as each field's own `error`. Both
-            // fields carried the same message with validationMessageHorizontalOverflow,
-            // which lays the message out at width 0 and lets it spill right, so the two
-            // copies overlapped each other and the fields beside them.
-            <div className={styles.selectorConflict}>
-              <FieldValidationMessage>{selectorConflictError}</FieldValidationMessage>
-            </div>
+          {selectorsApply && (
+            <>
+              <EditorField
+                label={'Trace ID'}
+                tooltip={<>Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.</>}
+                invalid={selectorConflict || traceIdFormatError !== undefined}
+                error={traceIdFormatError}
+              >
+                <Input
+                  id="pyroscope-trace-id"
+                  value={traceId}
+                  type="string"
+                  placeholder="7c9e66797425440de944be07fc1f90ae"
+                  onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
+                    const value = event.currentTarget.value.trim();
+                    onQueryChange({ ...query, traceIdSelector: value !== '' ? [value] : [] });
+                  }}
+                />
+              </EditorField>
+              <EditorField
+                label={'Span ID'}
+                tooltip={<>Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.</>}
+                invalid={selectorConflict}
+              >
+                <Input
+                  id="pyroscope-span-id"
+                  value={spanId}
+                  type="string"
+                  placeholder="64f170a95f537095"
+                  onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
+                    const value = event.currentTarget.value.trim();
+                    onQueryChange({ ...query, spanSelector: value !== '' ? [value] : [] });
+                  }}
+                />
+              </EditorField>
+              {selectorConflict && (
+                // Rendered once for the pair rather than as each field's own `error`.
+                // Both fields carried the same message with
+                // validationMessageHorizontalOverflow, which lays the message out at
+                // width 0 and lets it spill right, so the two copies overlapped each
+                // other and the fields beside them.
+                <div className={styles.selectorConflict}>
+                  <FieldValidationMessage>{selectorConflictError}</FieldValidationMessage>
+                </div>
+              )}
+            </>
           )}
           <EditorField label={'Max Nodes'} tooltip={<>Sets the maximum number of nodes to return in the flamegraph.</>}>
             <Input

@@ -194,6 +194,32 @@ describe('QueryEditor', () => {
     expect(screen.queryByText(/must be exactly 32 hexadecimal characters/)).toBeNull();
   });
 
+  it('should hide the Trace ID and Span ID fields for a metrics query', async () => {
+    // The backend never forwards either selector on the metrics path, so showing the
+    // fields would offer controls that do nothing.
+    setup({ props: { query: { ...baseQuery, queryType: 'metrics' } } });
+    await openOptions();
+    expect(screen.queryByLabelText('Trace ID')).toBeNull();
+    expect(screen.queryByLabelText('Span ID')).toBeNull();
+  });
+
+  it('should not report a conflict for a metrics query carrying both selectors', async () => {
+    // Reachable by switching Query Type to Metric with both fields populated. The
+    // server accepts this, so the editor must not call it broken.
+    setup({
+      props: {
+        query: {
+          ...baseQuery,
+          queryType: 'metrics',
+          traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'],
+          spanSelector: ['64f170a95f537095'],
+        },
+      },
+    });
+    await openOptions();
+    expect(screen.queryByText(/cannot be used together/)).toBeNull();
+  });
+
   it('should show a conflict error when both Trace ID and Span ID are set', async () => {
     setup({
       props: {
