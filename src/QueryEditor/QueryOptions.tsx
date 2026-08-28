@@ -3,7 +3,7 @@ import * as React from 'react';
 
 import { CoreApp, type GrafanaTheme2, type SelectableValue } from '@grafana/data';
 import { config } from '@grafana/runtime';
-import { useStyles2, RadioButtonGroup, MultiSelect, Input, InlineSwitch } from '@grafana/ui';
+import { useStyles2, RadioButtonGroup, MultiSelect, Input, InlineSwitch, FieldValidationMessage } from '@grafana/ui';
 
 import type { HeatmapQueryType } from '../dataquery';
 import { type Query } from '../types';
@@ -140,8 +140,6 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               </>
             }
             invalid={selectorConflict}
-            error={selectorConflict ? selectorConflictError : undefined}
-            validationMessageHorizontalOverflow
           >
             <Input
               id="pyroscope-trace-id"
@@ -162,8 +160,6 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               </>
             }
             invalid={selectorConflict}
-            error={selectorConflict ? selectorConflictError : undefined}
-            validationMessageHorizontalOverflow
           >
             <Input
               id="pyroscope-span-id"
@@ -176,6 +172,15 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               }}
             />
           </EditorField>
+          {selectorConflict && (
+            // Rendered once for the pair rather than as each field's own `error`. Both
+            // fields carried the same message with validationMessageHorizontalOverflow,
+            // which lays the message out at width 0 and lets it spill right, so the two
+            // copies overlapped each other and the fields beside them.
+            <div className={styles.selectorConflict}>
+              <FieldValidationMessage>{selectorConflictError}</FieldValidationMessage>
+            </div>
+          )}
           <EditorField label={'Max Nodes'} tooltip={<>Sets the maximum number of nodes to return in the flamegraph.</>}>
             <Input
               value={query.maxNodes || ''}
@@ -245,6 +250,10 @@ const getStyles = (theme: GrafanaTheme2) => {
       '&:hover': {
         color: theme.colors.text.primary,
       },
+    }),
+    selectorConflict: css({
+      // Break onto its own row so the message has the full width to wrap into.
+      flexBasis: '100%',
     }),
     body: css({
       display: 'flex',

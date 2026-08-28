@@ -185,7 +185,9 @@ describe('QueryEditor', () => {
       },
     });
     await openOptions();
-    expect(screen.getAllByText(/cannot be used together/).length).toBeGreaterThan(0);
+    // Exactly one: the message used to render as both fields' `error`, and the two
+    // copies overlapped each other in the flex row.
+    expect(screen.getAllByText(/cannot be used together/)).toHaveLength(1);
   });
 });
 

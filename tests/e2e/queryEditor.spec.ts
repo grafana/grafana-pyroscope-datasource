@@ -165,7 +165,10 @@ test.describe('Query editor', () => {
       const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
       await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID], spanSelector: [SPAN_ID] }));
       await page.getByRole('button', { name: /^Options/ }).click();
-      await expect(page.getByText(/cannot be used together/).first()).toBeVisible();
+      const conflict = page.getByText(/cannot be used together/);
+      await expect(conflict).toBeVisible();
+      // One copy only, otherwise the messages overlap on top of each other.
+      await expect(conflict).toHaveCount(1);
     });
   });
 
