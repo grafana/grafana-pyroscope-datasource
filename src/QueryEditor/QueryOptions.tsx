@@ -51,6 +51,13 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
   // waiting for the query to come back with an error.
   const selectorConflict = spanId !== '' && traceId !== '';
   const selectorConflictError = 'Trace ID and Span ID cannot be used together. Clear one of them.';
+  // Pyroscope only accepts a 128-bit W3C trace ID, so a pasted 16-hex span ID is a
+  // guaranteed server-side rejection. Flag it before the query is sent. A value holding
+  // a template variable is left alone, since it only resolves at query time.
+  const traceIdFormatError =
+    traceId !== '' && !traceId.includes('$') && !/^[0-9a-fA-F]{32}$/.test(traceId)
+      ? 'Trace ID must be exactly 32 hexadecimal characters.'
+      : undefined;
 
   let collapsedInfo = [`Type: ${query.queryType}`];
   if (query.groupBy?.length) {
@@ -69,6 +76,10 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
     // Options renders collapsed by default, so without this a deep link carrying both
     // selectors would fail with nothing on screen to explain why.
     collapsedInfo.push(selectorConflictError);
+  }
+  if (traceIdFormatError) {
+    // Same reasoning: a deep link carrying a bad trace ID must say so while collapsed.
+    collapsedInfo.push(traceIdFormatError);
   }
   if (query.maxNodes) {
     collapsedInfo.push(`Max nodes: ${query.maxNodes}`);
@@ -139,7 +150,8 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
                 Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.
               </>
             }
-            invalid={selectorConflict}
+            invalid={selectorConflict || traceIdFormatError !== undefined}
+            error={traceIdFormatError}
           >
             <Input
               id="pyroscope-trace-id"

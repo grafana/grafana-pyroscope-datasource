@@ -322,12 +322,6 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		// Pyroscope requires trace IDs to be exactly 32 hex characters, so pasting a
-		// 16-hex span ID into the Trace ID field lands here. Surface something the
-		// user can act on instead of a bare connect error.
-		if len(traceIdSelector) > 0 && connect.CodeOf(err) == connect.CodeInvalidArgument {
-			return nil, backend.DownstreamError(fmt.Errorf("the Pyroscope server rejected the trace ID (it must be exactly 32 hex characters): %w", err))
-		}
 		return nil, backend.DownstreamError(fmt.Errorf("received error from client while getting profile: %w", err))
 	}
 

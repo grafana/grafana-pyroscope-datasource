@@ -174,6 +174,26 @@ describe('QueryEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ spanSelector: ['64f170a95f537095'] }));
   });
 
+  it('should flag a trace ID that is not 32 hex characters', async () => {
+    // A span ID pasted into the Trace ID field: the mistake this check exists for.
+    setup({ props: { query: { ...baseQuery, traceIdSelector: ['64f170a95f537095'] } } });
+    await openOptions();
+    expect(screen.getByText(/must be exactly 32 hexadecimal characters/)).toBeDefined();
+  });
+
+  it('should not flag a valid trace ID', async () => {
+    setup({ props: { query: { ...baseQuery, traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'] } } });
+    await openOptions();
+    expect(screen.queryByText(/must be exactly 32 hexadecimal characters/)).toBeNull();
+  });
+
+  it('should not flag a trace ID holding a template variable', async () => {
+    // Only resolved at query time, so the editor cannot judge it.
+    setup({ props: { query: { ...baseQuery, traceIdSelector: ['$traceId'] } } });
+    await openOptions();
+    expect(screen.queryByText(/must be exactly 32 hexadecimal characters/)).toBeNull();
+  });
+
   it('should show a conflict error when both Trace ID and Span ID are set', async () => {
     setup({
       props: {

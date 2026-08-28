@@ -119,6 +119,32 @@ func Test_query(t *testing.T) {
 		require.Contains(t, resp.Error.Error(), "cannot use span ID and trace ID simultaneously")
 	})
 
+	t.Run("query profile rejects a malformed trace ID before sending", func(t *testing.T) {
+		// A 16-hex span ID pasted into the Trace ID field. The client must not be
+		// called at all: the point is to name the problem instead of relaying a
+		// generic InvalidArgument from the server.
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeProfile
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","traceIdSelector":["64f170a95f537095"]}`)
+		client.ProfileArgs = nil
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Error(t, resp.Error)
+		require.Contains(t, resp.Error.Error(), "invalid trace ID")
+		require.Contains(t, resp.Error.Error(), "32 hexadecimal characters")
+		require.Nil(t, client.ProfileArgs)
+	})
+
+	t.Run("query profile rejects a non-hexadecimal trace ID", func(t *testing.T) {
+		dataQuery := makeDataQuery()
+		dataQuery.QueryType = queryTypeProfile
+		dataQuery.JSON = []byte(`{"profileTypeId":"memory:alloc_objects:count:space:bytes","labelSelector":"{}","traceIdSelector":["zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"]}`)
+		client.ProfileArgs = nil
+		resp := ds.query(context.Background(), pCtx, *dataQuery)
+		require.Error(t, resp.Error)
+		require.Contains(t, resp.Error.Error(), "invalid trace ID")
+		require.Nil(t, client.ProfileArgs)
+	})
+
 	t.Run("query metrics ignores span and trace selectors", func(t *testing.T) {
 		// Neither selector applies to the metrics path, so a metrics query carrying
 		// both must still succeed. Reachable in the UI: switching Query Type to
