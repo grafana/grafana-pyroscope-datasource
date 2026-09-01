@@ -1,6 +1,6 @@
 services:
   pyroscope:
-    image: grafana/pyroscope:latest
+    image: grafana/pyroscope:latest@sha256:881328cdbff0ef7601e23a0e7647fecb7099b4fe4c74fcdd204cb64722e2b2d0
     pull_policy: missing
     ports:
       - 4040:4040
