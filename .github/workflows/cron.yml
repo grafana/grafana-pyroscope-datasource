@@ -5,24 +5,44 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
 
-permissions: {}
+# Reusable workflows can only narrow caller permissions, not escalate.
+# `id-token: write` is needed by the Vault OIDC step in playwright-cloud.yml.
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
-  # Runs the Playwright end-to-end suite against the shared DSE2EDEV Grafana Cloud
-  # instance via Grafana Bench. The data source instance is provisioned via the Data
-  # Source Instances portal (https://datasources.grafana.net/), and its connection
-  # details are read from Vault using the paths below.
-  #
-  # TODO: replace the <instance> segment of each Vault path with the actual Pulumi
-  # outputKey for the provisioned Pyroscope instance once it's published in the
-  # Data Source Instances portal. The current placeholder assumes a `pyroscope`
-  # output key — confirm and adjust if necessary.
   playwright-cloud:
     uses: grafana/data-sources-ci-workflows/.github/workflows/playwright-cloud.yml@main
     secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
     with:
+      run-stage: nightly
+      # The self-hosted Pyroscope service is reachable from the shared Cloud
+      # instance through the AWS PDC network.
+      pdc-network-name: datasources-pdc-network-aws-datasourcese2e
+      # Paths are relative to ci/repo/grafana/grafana-pyroscope-datasource/ —
+      # get-vault-secrets prepends that prefix for `repo_secrets`.
       repo-secrets: |
-        DS_INSTANCE_HOST=grafana-pyroscope-datasource/pyroscope:json_host
-        DS_INSTANCE_PASSWORD=grafana-pyroscope-datasource/pyroscope:secure_password
-        DS_INSTANCE_PORT=grafana-pyroscope-datasource/pyroscope:json_port
-        DS_INSTANCE_USERNAME=grafana-pyroscope-datasource/pyroscope:json_username
+        DS_INSTANCE_URL=pyroscope:url
+
+  notify-slack:
+    name: Notify Slack on failure
+    needs: playwright-cloud
+    if: failure()
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Notify Slack on failure
+        uses: grafana/data-sources-ci-workflows/.github/actions/notify-cloud-e2e-failure@main
+        with:
+          repo: ${{ github.repository }}
+          run-stage: nightly
+          ref-name: ${{ github.ref_name }}
+          actor: ${{ github.actor }}
+          sha: ${{ github.sha }}
+          run-url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
