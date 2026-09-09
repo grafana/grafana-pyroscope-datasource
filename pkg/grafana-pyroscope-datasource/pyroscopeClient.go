@@ -344,8 +344,8 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSelector string, spanSelector []string, start, end int64, maxNodes *int64) (*ProfileResponse, error) {
 	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetSpanProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector), attribute.String("spanSelector", strings.Join(spanSelector, ","))))
 	defer span.End()
-	req := &connect.Request[querierv1.SelectMergeSpanProfileRequest]{
-		Msg: &querierv1.SelectMergeSpanProfileRequest{
+	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
+		Msg: &querierv1.SelectMergeStacktracesRequest{
 			ProfileTypeID: profileTypeID,
 			LabelSelector: labelSelector,
 			SpanSelector:  spanSelector,
@@ -355,7 +355,7 @@ func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, lab
 		},
 	}
 
-	resp, err := c.connectClient.SelectMergeSpanProfile(ctx, req)
+	resp, err := c.connectClient.SelectMergeStacktraces(ctx, req)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
