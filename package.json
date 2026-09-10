@@ -86,7 +86,7 @@
     "react-dom": "18.3.1",
     "rxjs": "7.8.2"
   },
-  "packageManager": "npm@11.19.1",
+  "packageManager": "npm@12.0.2",
   "overrides": {
     "serialize-javascript": "7.1.0",
     "browserslist": "4.28.9",
