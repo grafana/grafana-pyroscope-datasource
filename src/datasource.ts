@@ -107,7 +107,7 @@ export class PyroscopeDataSource extends DataSourceWithBackend<Query, PyroscopeD
   }
 
   applyTemplateVariables(query: Query, scopedVars: ScopedVars, filters?: AdHocVariableFilter[]): Query {
-    let labelSelector = this.templateSrv.replace(query.labelSelector ?? '', scopedVars);
+    let labelSelector = this.templateSrv.replace(query.labelSelector ?? '', scopedVars, interpolateLabelSelectorValue);
     if (filters && labelSelector) {
       for (const filter of filters) {
         labelSelector = addLabelToQuery(labelSelector, filter.key, filter.value, filter.operator);
@@ -162,6 +162,23 @@ const defaultQuery: Partial<Query> = {
   ...defaultGrafanaPyroscopeDataQuery,
   queryType: defaultPyroscopeQueryType,
 };
+
+/**
+ * Formats template variable values in a label selector. The default format joins multiple values
+ * as `{a,b}`, which is not a valid regex, so multiple values are escaped and joined with `|` instead,
+ * like the Prometheus and Loki data sources do. Single values are left unchanged so they keep
+ * working with `=` matchers.
+ */
+export function interpolateLabelSelectorValue(value: string | string[]): string {
+  if (!Array.isArray(value)) {
+    return value;
+  }
+  if (value.length === 1) {
+    return value[0];
+  }
+  // Double backslash because the regex is inside a double-quoted label value.
+  return value.map((v) => v.replace(/[\\^$*+?.()|[\]{}]/g, '\\\\$&')).join('|');
+}
 
 export function normalizeQuery(query: Query, app?: CoreApp | string) {
   let normalized = { ...defaultQuery, ...query };
