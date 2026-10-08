@@ -1,5 +1,9 @@
 # Changelog
 
+## 13.0.7
+
+- Fix vulnerable transitive dependencies (brace-expansion, basic-ftp)
+
 ## 13.0.6
 
 - Dependency updates ([#65](https://github.com/grafana/grafana-pyroscope-datasource/pull/65)) 
