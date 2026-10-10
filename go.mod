@@ -3,7 +3,7 @@ module github.com/grafana/grafana-pyroscope-datasource
 go 1.26.7
 
 require (
-	connectrpc.com/connect v1.21.0
+	connectrpc.com/connect/v2 v2.0.0
 	github.com/dustin/go-humanize v1.0.1
 	github.com/grafana/grafana-plugin-sdk-go v0.296.4
 	github.com/grafana/pyroscope/api v1.6.0
@@ -17,6 +17,7 @@ require (
 )
 
 require (
+	connectrpc.com/connect v1.19.2 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/apache/arrow-go/v18 v18.8.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
