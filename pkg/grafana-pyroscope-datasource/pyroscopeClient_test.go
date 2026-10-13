@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protowire"
 
 	"github.com/grafana/grafana-plugin-sdk-go/config"
 	"github.com/grafana/grafana-plugin-sdk-go/experimental/featuretoggles"
@@ -23,7 +24,7 @@ func Test_PyroscopeClient(t *testing.T) {
 
 	t.Run("GetSeries", func(t *testing.T) {
 		limit := int64(42)
-		resp, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE)
+		resp, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE, nil)
 		require.Nil(t, err)
 
 		series := &SeriesResponse{
@@ -38,7 +39,7 @@ func Test_PyroscopeClient(t *testing.T) {
 
 	t.Run("GetSeriesWithExemplars", func(t *testing.T) {
 		limit := int64(42)
-		resp, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_INDIVIDUAL)
+		resp, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_INDIVIDUAL, nil)
 		require.Nil(t, err)
 
 		series := &SeriesResponse{
@@ -51,9 +52,18 @@ func Test_PyroscopeClient(t *testing.T) {
 		require.Equal(t, series, resp)
 	})
 
+	t.Run("GetSeries forwards frame filters", func(t *testing.T) {
+		filter := &StackFrameFilter{IncludeFunctionNameRegexes: []string{"^main\\."}}
+		_, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, nil, nil, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE, filter)
+		require.NoError(t, err)
+		req := connectClient.Req.(*connect.Request[querierv1.SelectSeriesRequest])
+		require.NotNil(t, req.Msg.StackTraceSelector)
+		require.NotEmpty(t, req.Msg.StackTraceSelector.ProtoReflect().GetUnknown())
+	})
+
 	t.Run("GetProfile", func(t *testing.T) {
 		maxNodes := int64(-1)
-		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil)
+		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil, nil)
 		require.Nil(t, err)
 
 		series := &ProfileResponse{
@@ -75,7 +85,7 @@ func Test_PyroscopeClient(t *testing.T) {
 	t.Run("GetProfile with empty response", func(t *testing.T) {
 		connectClient.SendEmptyProfileResponse = true
 		maxNodes := int64(-1)
-		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil)
+		resp, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil, nil)
 		require.Nil(t, err)
 		// Mainly ensuring this does not panic like before
 		require.Nil(t, resp)
@@ -85,7 +95,7 @@ func Test_PyroscopeClient(t *testing.T) {
 	t.Run("GetProfile passes profileIdSelector to request", func(t *testing.T) {
 		maxNodes := int64(-1)
 		selector := []string{"id1", "id2"}
-		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, selector, nil)
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, selector, nil, nil)
 		require.Nil(t, err)
 
 		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
@@ -96,7 +106,7 @@ func Test_PyroscopeClient(t *testing.T) {
 	t.Run("GetProfile turns a call site into a stack trace selector", func(t *testing.T) {
 		maxNodes := int64(-1)
 		callSite := []string{"total", "main.main", "main.work"}
-		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, callSite)
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, callSite, nil)
 		require.Nil(t, err)
 
 		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
@@ -109,9 +119,36 @@ func Test_PyroscopeClient(t *testing.T) {
 		require.Equal(t, callSite, names)
 	})
 
+	t.Run("GetProfile sends exact and regex frame filters", func(t *testing.T) {
+		filter := &StackFrameFilter{
+			IncludeFunctionNames:       []string{"main.work"},
+			ExcludeFunctionNames:       []string{"main.idle"},
+			IncludeFunctionNameRegexes: []string{"^main\\..*"},
+			ExcludeFunctionNameRegexes: []string{".*sleep.*"},
+		}
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, nil, nil, nil, filter)
+		require.NoError(t, err)
+		req := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
+		require.NotNil(t, req.Msg.StackTraceSelector)
+		unknown := req.Msg.StackTraceSelector.ProtoReflect().GetUnknown()
+		field, wireType, n := protowire.ConsumeTag(unknown)
+		require.Equal(t, protowire.Number(3), field)
+		require.Equal(t, protowire.BytesType, wireType)
+		encoded, n := protowire.ConsumeBytes(unknown[n:])
+		require.Positive(t, n)
+		var got []string
+		for len(encoded) > 0 {
+			field, _, n = protowire.ConsumeTag(encoded)
+			value, length := protowire.ConsumeString(encoded[n:])
+			got = append(got, string(rune('0'+field))+":"+value)
+			encoded = encoded[n+length:]
+		}
+		require.Equal(t, []string{"1:main.work", "2:main.idle", "3:^main\\..*", "4:.*sleep.*"}, got)
+	})
+
 	t.Run("GetProfile leaves the stack trace selector unset without a call site", func(t *testing.T) {
 		maxNodes := int64(-1)
-		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil)
+		_, err := client.GetProfile(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, &maxNodes, nil, nil, nil)
 		require.Nil(t, err)
 
 		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectMergeStacktracesRequest])
@@ -141,7 +178,7 @@ func Test_PyroscopeClient(t *testing.T) {
 
 	t.Run("GetSeries sets UTF-8 Accept header when toggle enabled", func(t *testing.T) {
 		limit := int64(10)
-		_, err := client.GetSeries(ctxWithToggle, "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE)
+		_, err := client.GetSeries(ctxWithToggle, "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE, nil)
 		require.NoError(t, err)
 		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectSeriesRequest])
 		require.True(t, ok)
@@ -150,7 +187,7 @@ func Test_PyroscopeClient(t *testing.T) {
 
 	t.Run("GetSeries does not set UTF-8 Accept header when toggle disabled", func(t *testing.T) {
 		limit := int64(10)
-		_, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE)
+		_, err := client.GetSeries(context.Background(), "memory:alloc_objects:count:space:bytes", "{}", 0, 100, []string{}, &limit, 15, typesv1.ExemplarType_EXEMPLAR_TYPE_NONE, nil)
 		require.NoError(t, err)
 		req, ok := connectClient.Req.(*connect.Request[querierv1.SelectSeriesRequest])
 		require.True(t, ok)

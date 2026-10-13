@@ -616,7 +616,7 @@ func (f *FakeClient) LabelNames(ctx context.Context, labelSelector string, start
 	panic("implement me")
 }
 
-func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, callSite []string) (*ProfileResponse, error) {
+func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, callSite []string, frameFilter *StackFrameFilter) (*ProfileResponse, error) {
 	return &ProfileResponse{
 		Flamebearer: &Flamebearer{
 			Names: []string{"foo", "bar", "baz"},
@@ -632,7 +632,7 @@ func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelecto
 	}, nil
 }
 
-func (f *FakeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSelector string, spanSelector []string, start, end int64, maxNodes *int64) (*ProfileResponse, error) {
+func (f *FakeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSelector string, spanSelector []string, start, end int64, maxNodes *int64, frameFilter *StackFrameFilter) (*ProfileResponse, error) {
 	return &ProfileResponse{
 		Flamebearer: &Flamebearer{
 			Names: []string{"foo", "bar", "baz"},
@@ -648,7 +648,7 @@ func (f *FakeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSel
 	}, nil
 }
 
-func (f *FakeClient) GetSeries(ctx context.Context, profileTypeID, labelSelector string, start, end int64, groupBy []string, limit *int64, step float64, exemplarType typesv1.ExemplarType) (*SeriesResponse, error) {
+func (f *FakeClient) GetSeries(ctx context.Context, profileTypeID, labelSelector string, start, end int64, groupBy []string, limit *int64, step float64, exemplarType typesv1.ExemplarType, frameFilter *StackFrameFilter) (*SeriesResponse, error) {
 	f.Args = []any{profileTypeID, labelSelector, start, end, groupBy, step}
 	return &SeriesResponse{
 		Series: []*Series{

@@ -130,7 +130,7 @@ func (c *PyroscopeClient) ProfileTypes(ctx context.Context, start int64, end int
 	}
 }
 
-func (c *PyroscopeClient) GetSeries(ctx context.Context, profileTypeID string, labelSelector string, start int64, end int64, groupBy []string, limit *int64, step float64, exemplarType typesv1.ExemplarType) (*SeriesResponse, error) {
+func (c *PyroscopeClient) GetSeries(ctx context.Context, profileTypeID string, labelSelector string, start int64, end int64, groupBy []string, limit *int64, step float64, exemplarType typesv1.ExemplarType, frameFilter *StackFrameFilter) (*SeriesResponse, error) {
 	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetSeries", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector)))
 	defer span.End()
 	req := connect.NewRequest(&querierv1.SelectSeriesRequest{
@@ -143,6 +143,7 @@ func (c *PyroscopeClient) GetSeries(ctx context.Context, profileTypeID string, l
 		Limit:         limit,
 		ExemplarType:  exemplarType,
 	})
+	req.Msg.StackTraceSelector = addFrameFilter(nil, frameFilter)
 	if config.GrafanaConfigFromContext(ctx).FeatureToggles().IsEnabled(utf8LabelNamesFeatureToggle) {
 		setUTF8AcceptHeader(req.Header())
 	}
@@ -303,7 +304,7 @@ func (c *PyroscopeClient) GetHeatmap(ctx context.Context, profileTypeID string, 
 	}, nil
 }
 
-func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, callSite []string) (*ProfileResponse, error) {
+func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, callSite []string, frameFilter *StackFrameFilter) (*ProfileResponse, error) {
 	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector)))
 	defer span.End()
 	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
@@ -325,6 +326,7 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 		req.Msg.StackTraceSelector = &typesv1.StackTraceSelector{CallSite: locations}
 		span.SetAttributes(attribute.Int("callSiteDepth", len(callSite)))
 	}
+	req.Msg.StackTraceSelector = addFrameFilter(req.Msg.StackTraceSelector, frameFilter)
 
 	resp, err := c.connectClient.SelectMergeStacktraces(ctx, req)
 	if err != nil {
@@ -341,7 +343,7 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 	return profileQuery(resp.Msg.Flamegraph, profileTypeID)
 }
 
-func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSelector string, spanSelector []string, start, end int64, maxNodes *int64) (*ProfileResponse, error) {
+func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSelector string, spanSelector []string, start, end int64, maxNodes *int64, frameFilter *StackFrameFilter) (*ProfileResponse, error) {
 	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetSpanProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector), attribute.String("spanSelector", strings.Join(spanSelector, ","))))
 	defer span.End()
 	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
@@ -354,6 +356,7 @@ func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, lab
 			MaxNodes:      maxNodes,
 		},
 	}
+	req.Msg.StackTraceSelector = addFrameFilter(req.Msg.StackTraceSelector, frameFilter)
 
 	resp, err := c.connectClient.SelectMergeStacktraces(ctx, req)
 	if err != nil {
