@@ -1,6 +1,6 @@
 module github.com/grafana/grafana-pyroscope-datasource
 
-go 1.26.7
+go 1.27.3
 
 require (
 	connectrpc.com/connect v1.21.0
