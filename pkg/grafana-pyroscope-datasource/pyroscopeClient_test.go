@@ -58,7 +58,8 @@ func Test_PyroscopeClient(t *testing.T) {
 
 		series := &ProfileResponse{
 			Flamebearer: &Flamebearer{
-				Names: []string{"foo", "bar", "baz"},
+				Names:        []string{"foo", "bar", "baz"},
+				MappingNames: []string{"", "file1", "file2"},
 				Levels: []*Level{
 					{Values: []int64{0, 10, 0, 0}},
 					{Values: []int64{0, 9, 0, 1}},
@@ -194,7 +195,8 @@ func (f *FakePyroscopeConnectClient) SelectMergeStacktraces(ctx context.Context,
 	return &connect.Response[querierv1.SelectMergeStacktracesResponse]{
 		Msg: &querierv1.SelectMergeStacktracesResponse{
 			Flamegraph: &querierv1.FlameGraph{
-				Names: []string{"foo", "bar", "baz"},
+				Names:        []string{"foo", "bar", "baz"},
+				MappingNames: []string{"", "file1", "file2"},
 				Levels: []*querierv1.Level{
 					{Values: []int64{0, 10, 0, 0}},
 					{Values: []int64{0, 9, 0, 1}},
