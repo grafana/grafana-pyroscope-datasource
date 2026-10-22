@@ -303,7 +303,7 @@ func (c *PyroscopeClient) GetHeatmap(ctx context.Context, profileTypeID string, 
 	}, nil
 }
 
-func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string) (*ProfileResponse, error) {
+func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string, callSite []string) (*ProfileResponse, error) {
 	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector), attribute.String("traceIdSelector", strings.Join(traceIdSelector, ","))))
 	defer span.End()
 	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
@@ -316,6 +316,15 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 			ProfileIdSelector: profileIdSelector,
 			TraceIdSelector:   traceIdSelector,
 		},
+	}
+
+	if len(callSite) > 0 {
+		locations := make([]*typesv1.Location, 0, len(callSite))
+		for _, name := range callSite {
+			locations = append(locations, &typesv1.Location{Name: name})
+		}
+		req.Msg.StackTraceSelector = &typesv1.StackTraceSelector{CallSite: locations}
+		span.SetAttributes(attribute.Int("callSiteDepth", len(callSite)))
 	}
 
 	resp, err := c.connectClient.SelectMergeStacktraces(ctx, req)
@@ -336,8 +345,8 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, labelSelector string, spanSelector []string, start, end int64, maxNodes *int64) (*ProfileResponse, error) {
 	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetSpanProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector), attribute.String("spanSelector", strings.Join(spanSelector, ","))))
 	defer span.End()
-	req := &connect.Request[querierv1.SelectMergeSpanProfileRequest]{
-		Msg: &querierv1.SelectMergeSpanProfileRequest{
+	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
+		Msg: &querierv1.SelectMergeStacktracesRequest{
 			ProfileTypeID: profileTypeID,
 			LabelSelector: labelSelector,
 			SpanSelector:  spanSelector,
@@ -347,15 +356,7 @@ func (c *PyroscopeClient) GetSpanProfile(ctx context.Context, profileTypeID, lab
 		},
 	}
 
-	// SelectMergeSpanProfile is deprecated upstream in favor of
-	// SelectMergeStacktraces with span_selector. Migrating changes the code path
-	// for every existing Span ID user, so it is tracked separately rather than
-	// folded into the trace ID work.
-	//
-	// See: https://github.com/grafana/grafana-pyroscope-datasource/issues/56
-	//
-	//nolint:staticcheck
-	resp, err := c.connectClient.SelectMergeSpanProfile(ctx, req)
+	resp, err := c.connectClient.SelectMergeStacktraces(ctx, req)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

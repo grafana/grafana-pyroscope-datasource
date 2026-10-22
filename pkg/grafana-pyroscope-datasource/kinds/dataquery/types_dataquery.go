@@ -43,6 +43,8 @@ type GrafanaPyroscopeDataQuery struct {
 	IncludeExemplars bool `json:"includeExemplars"`
 	// Specifies the query profile id selectors.
 	ProfileIdSelector []string `json:"profileIdSelector,omitempty"`
+	// Selects only the stack traces going through this call site, given as function names from the root down.
+	StackTraceSelector []string `json:"stackTraceSelector,omitempty"`
 	// Specifies the query trace id selectors.
 	TraceIdSelector []string `json:"traceIdSelector,omitempty"`
 	// If set to true, heatmap data will be requested

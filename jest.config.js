@@ -25,6 +25,9 @@ module.exports = {
       '@lezer/common',
       '@lezer/highlight',
       '@grafana/lezer-logql',
+      // @react-hookz/web and its @ver0/deep-equal dependency ship ESM-only; needed by @grafana/data
+      '@react-hookz/web',
+      '@ver0/deep-equal',
     ]),
   ],
 };

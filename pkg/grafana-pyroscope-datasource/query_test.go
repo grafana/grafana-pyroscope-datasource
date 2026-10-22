@@ -696,8 +696,8 @@ func (f *FakeClient) LabelNames(ctx context.Context, labelSelector string, start
 	panic("implement me")
 }
 
-func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string) (*ProfileResponse, error) {
-	f.ProfileArgs = []any{profileTypeID, labelSelector, start, end, maxNodes, profileIdSelector, traceIdSelector}
+func (f *FakeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string, callSite []string) (*ProfileResponse, error) {
+	f.ProfileArgs = []any{profileTypeID, labelSelector, start, end, maxNodes, profileIdSelector, traceIdSelector, callSite}
 	return &ProfileResponse{
 		Flamebearer: &Flamebearer{
 			Names: []string{"foo", "bar", "baz"},
