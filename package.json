@@ -86,7 +86,7 @@
     "react-dom": "18.3.1",
     "rxjs": "7.8.2"
   },
-  "packageManager": "npm@11.21.1",
+  "packageManager": "npm@12.2.1",
   "overrides": {
     "serialize-javascript": "7.1.2",
     "basic-ftp": "6.2.3"
