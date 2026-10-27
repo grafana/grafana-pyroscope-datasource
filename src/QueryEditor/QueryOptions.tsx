@@ -150,11 +150,7 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
             <>
               <EditorField
                 label={'Trace ID'}
-                tooltip={
-                  <>
-                    Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.
-                  </>
-                }
+                tooltip={<>Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.</>}
                 disabled={traceIdDisabled}
                 invalid={traceIdFormatError !== undefined}
                 error={traceIdFormatError}
@@ -171,11 +167,7 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               </EditorField>
               <EditorField
                 label={'Span ID'}
-                tooltip={
-                  <>
-                    Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.
-                  </>
-                }
+                tooltip={<>Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.</>}
                 disabled={spanIdDisabled}
               >
                 <Input

@@ -11,11 +11,11 @@
 
 import * as common from '@grafana/schema';
 
-export type PyroscopeQueryType = ('metrics' | 'profile' | 'both');
+export type PyroscopeQueryType = 'metrics' | 'profile' | 'both';
 
 export const defaultPyroscopeQueryType: PyroscopeQueryType = 'both';
 
-export type HeatmapQueryType = ('individual' | 'span');
+export type HeatmapQueryType = 'individual' | 'span';
 
 export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
   /**
@@ -29,7 +29,7 @@ export interface GrafanaPyroscopeDataQuery extends common.DataQuery {
   /**
    * Specifies the type of heatmap query
    */
-  heatmapType: (HeatmapQueryType | 'individual');
+  heatmapType: HeatmapQueryType | 'individual';
   /**
    * If set to true, exemplars will be requested
    */
