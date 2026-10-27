@@ -3,7 +3,7 @@ import * as React from 'react';
 
 import { CoreApp, type GrafanaTheme2, type SelectableValue } from '@grafana/data';
 import { config } from '@grafana/runtime';
-import { useStyles2, RadioButtonGroup, MultiSelect, Input, InlineSwitch, FieldValidationMessage } from '@grafana/ui';
+import { useStyles2, RadioButtonGroup, MultiSelect, Input, InlineSwitch } from '@grafana/ui';
 
 import type { HeatmapQueryType } from '../dataquery';
 import { type Query } from '../types';
@@ -48,14 +48,17 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
   const spanId = query.spanSelector?.[0] ?? '';
   const traceId = query.traceIdSelector?.[0] ?? '';
   // Neither selector reaches the metrics path: the backend passes them only to the
-  // profile RPCs, so on a metrics query they are inert and flagging a conflict would
-  // mark a query the server happily accepts as broken. `both` still runs the profile
-  // leg, which does enforce the conflict, so only `metrics` opts out.
+  // profile RPCs, so on a metrics query they are inert and disabling one of them would
+  // withhold a field the server happily accepts. `both` still runs the profile leg,
+  // which does reject the pair, so only `metrics` opts out.
   const selectorsApply = query.queryType !== 'metrics';
-  // Pyroscope rejects a request that sets both, so flag it in the editor rather than
-  // waiting for the query to come back with an error.
-  const selectorConflict = selectorsApply && spanId !== '' && traceId !== '';
-  const selectorConflictError = 'Trace ID and Span ID cannot be used together. Clear one of them.';
+  // Pyroscope rejects a request that sets both, so the editor only ever offers one:
+  // filling either field disables the other. The field holding the value stays enabled
+  // so it can be cleared, and a link carrying both leaves neither disabled, which keeps
+  // that state recoverable. The backend still rejects the pair for anything that
+  // reaches it by another route.
+  const traceIdDisabled = spanId !== '' && traceId === '';
+  const spanIdDisabled = traceId !== '' && spanId === '';
   // Pyroscope only accepts a 128-bit W3C trace ID, so a pasted 16-hex span ID is a
   // guaranteed server-side rejection. Flag it before the query is sent. A value holding
   // a template variable is left alone, since it only resolves at query time.
@@ -76,11 +79,6 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
   }
   if (selectorsApply && query.spanSelector?.length) {
     collapsedInfo.push(`Span ID: ${query.spanSelector.join(', ')}`);
-  }
-  if (selectorConflict) {
-    // Options renders collapsed by default, so without this a deep link carrying both
-    // selectors would fail with nothing on screen to explain why.
-    collapsedInfo.push(selectorConflictError);
   }
   if (traceIdFormatError) {
     // Same reasoning: a deep link carrying a bad trace ID must say so while collapsed.
@@ -152,12 +150,16 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
             <>
               <EditorField
                 label={'Trace ID'}
-                tooltip={<>Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.</>}
-                invalid={selectorConflict || traceIdFormatError !== undefined}
+                tooltip={
+                  <>
+                    Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.
+                  </>
+                }
+                disabled={traceIdDisabled}
+                invalid={traceIdFormatError !== undefined}
                 error={traceIdFormatError}
               >
                 <Input
-                  id="pyroscope-trace-id"
                   value={traceId}
                   type="string"
                   placeholder="7c9e66797425440de944be07fc1f90ae"
@@ -169,11 +171,14 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               </EditorField>
               <EditorField
                 label={'Span ID'}
-                tooltip={<>Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.</>}
-                invalid={selectorConflict}
+                tooltip={
+                  <>
+                    Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.
+                  </>
+                }
+                disabled={spanIdDisabled}
               >
                 <Input
-                  id="pyroscope-span-id"
                   value={spanId}
                   type="string"
                   placeholder="64f170a95f537095"
@@ -183,16 +188,6 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
                   }}
                 />
               </EditorField>
-              {selectorConflict && (
-                // Rendered once for the pair rather than as each field's own `error`.
-                // Both fields carried the same message with
-                // validationMessageHorizontalOverflow, which lays the message out at
-                // width 0 and lets it spill right, so the two copies overlapped each
-                // other and the fields beside them.
-                <div className={styles.selectorConflict}>
-                  <FieldValidationMessage>{selectorConflictError}</FieldValidationMessage>
-                </div>
-              )}
             </>
           )}
           <EditorField label={'Max Nodes'} tooltip={<>Sets the maximum number of nodes to return in the flamegraph.</>}>
@@ -264,10 +259,6 @@ const getStyles = (theme: GrafanaTheme2) => {
       '&:hover': {
         color: theme.colors.text.primary,
       },
-    }),
-    selectorConflict: css({
-      // Break onto its own row so the message has the full width to wrap into.
-      flexBasis: '100%',
     }),
     body: css({
       display: 'flex',

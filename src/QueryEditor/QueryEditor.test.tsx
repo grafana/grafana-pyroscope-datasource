@@ -10,6 +10,11 @@ import { type ProfileTypeMessage, type Query } from '../types';
 
 import { type Props, QueryEditor } from './QueryEditor';
 
+// Neither selector input carries an `id`, which is what keeps them in step with every
+// other field in the editor, so there is no label to query them by.
+const TRACE_ID_PLACEHOLDER = '7c9e66797425440de944be07fc1f90ae';
+const SPAN_ID_PLACEHOLDER = '64f170a95f537095';
+
 describe('createSelector (UTF-8 label names)', () => {
   beforeEach(() => {
     mockFetchPyroscopeDatasourceSettings();
@@ -137,20 +142,20 @@ describe('QueryEditor', () => {
   it('should render the Trace ID and Span ID fields', async () => {
     setup();
     await openOptions();
-    expect(screen.getByLabelText('Trace ID')).toBeDefined();
-    expect(screen.getByLabelText('Span ID')).toBeDefined();
+    expect(screen.getByPlaceholderText(TRACE_ID_PLACEHOLDER)).toBeDefined();
+    expect(screen.getByPlaceholderText(SPAN_ID_PLACEHOLDER)).toBeDefined();
   });
 
   it('should show an existing traceIdSelector value', async () => {
     setup({ props: { query: { ...baseQuery, traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'] } } });
     await openOptions();
-    expect(screen.getByLabelText('Trace ID')).toHaveValue('7c9e66797425440de944be07fc1f90ae');
+    expect(screen.getByPlaceholderText(TRACE_ID_PLACEHOLDER)).toHaveValue('7c9e66797425440de944be07fc1f90ae');
   });
 
   it('should show an existing spanSelector value', async () => {
     setup({ props: { query: { ...baseQuery, spanSelector: ['64f170a95f537095'] } } });
     await openOptions();
-    expect(screen.getByLabelText('Span ID')).toHaveValue('64f170a95f537095');
+    expect(screen.getByPlaceholderText(SPAN_ID_PLACEHOLDER)).toHaveValue('64f170a95f537095');
   });
 
   // userEvent.paste rather than type: the Input is controlled by a `query` prop that
@@ -159,7 +164,7 @@ describe('QueryEditor', () => {
   it('should emit traceIdSelector when a trace ID is entered', async () => {
     const { onChange } = setup();
     await openOptions();
-    await userEvent.click(screen.getByLabelText('Trace ID'));
+    await userEvent.click(screen.getByPlaceholderText(TRACE_ID_PLACEHOLDER));
     await userEvent.paste('7c9e66797425440de944be07fc1f90ae');
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'] })
@@ -169,7 +174,7 @@ describe('QueryEditor', () => {
   it('should emit spanSelector when a span ID is entered', async () => {
     const { onChange } = setup();
     await openOptions();
-    await userEvent.click(screen.getByLabelText('Span ID'));
+    await userEvent.click(screen.getByPlaceholderText(SPAN_ID_PLACEHOLDER));
     await userEvent.paste('64f170a95f537095');
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ spanSelector: ['64f170a95f537095'] }));
   });
@@ -199,41 +204,40 @@ describe('QueryEditor', () => {
     // fields would offer controls that do nothing.
     setup({ props: { query: { ...baseQuery, queryType: 'metrics' } } });
     await openOptions();
-    expect(screen.queryByLabelText('Trace ID')).toBeNull();
-    expect(screen.queryByLabelText('Span ID')).toBeNull();
+    expect(screen.queryByPlaceholderText(TRACE_ID_PLACEHOLDER)).toBeNull();
+    expect(screen.queryByPlaceholderText(SPAN_ID_PLACEHOLDER)).toBeNull();
   });
 
-  it('should not report a conflict for a metrics query carrying both selectors', async () => {
-    // Reachable by switching Query Type to Metric with both fields populated. The
-    // server accepts this, so the editor must not call it broken.
+  it('should disable Span ID while Trace ID holds a value', async () => {
+    // Pyroscope takes one or the other, so the editor only ever offers one.
+    setup({ props: { query: { ...baseQuery, traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'] } } });
+    await openOptions();
+    expect(screen.getByPlaceholderText(SPAN_ID_PLACEHOLDER)).toBeDisabled();
+    // The field holding the value stays enabled so it can be cleared.
+    expect(screen.getByPlaceholderText(TRACE_ID_PLACEHOLDER)).toBeEnabled();
+  });
+
+  it('should disable Trace ID while Span ID holds a value', async () => {
+    setup({ props: { query: { ...baseQuery, spanSelector: ['64f170a95f537095'] } } });
+    await openOptions();
+    expect(screen.getByPlaceholderText(TRACE_ID_PLACEHOLDER)).toBeDisabled();
+    expect(screen.getByPlaceholderText(SPAN_ID_PLACEHOLDER)).toBeEnabled();
+  });
+
+  it('should leave both selectors enabled when a link carries both', async () => {
+    // Neither field can disable the other here, or the state would be unrecoverable.
     setup({
       props: {
         query: {
           ...baseQuery,
-          queryType: 'metrics',
           traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'],
           spanSelector: ['64f170a95f537095'],
         },
       },
     });
     await openOptions();
-    expect(screen.queryByText(/cannot be used together/)).toBeNull();
-  });
-
-  it('should show a conflict error when both Trace ID and Span ID are set', async () => {
-    setup({
-      props: {
-        query: {
-          ...baseQuery,
-          traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'],
-          spanSelector: ['64f170a95f537095'],
-        },
-      },
-    });
-    await openOptions();
-    // Exactly one: the message used to render as both fields' `error`, and the two
-    // copies overlapped each other in the flex row.
-    expect(screen.getAllByText(/cannot be used together/)).toHaveLength(1);
+    expect(screen.getByPlaceholderText(TRACE_ID_PLACEHOLDER)).toBeEnabled();
+    expect(screen.getByPlaceholderText(SPAN_ID_PLACEHOLDER)).toBeEnabled();
   });
 });
 

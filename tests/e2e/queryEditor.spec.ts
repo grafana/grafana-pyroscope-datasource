@@ -43,6 +43,10 @@ function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
 }
 
 const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
+// The placeholders double as locators: neither selector input carries an id, the same as
+// every other field in the editor, so neither has a label to query it by.
+const TRACE_ID = '7c9e66797425440de944be07fc1f90ae';
+const SPAN_ID = '64f170a95f537095';
 
 // Backend warmup (waiting for Pyroscope to finish ingesting its first profile)
 // is handled once for the whole run by `tests/e2e/global-setup.ts`, so every
@@ -115,21 +119,15 @@ test.describe('Query editor', () => {
       await expect(page.getByRole('radio', { name: 'Profile' })).toBeVisible();
       await expect(page.getByRole('radio', { name: 'Both' })).toBeVisible();
 
-      // Both selector inputs carry an id, so the wrapping Field label is their
-      // accessible name.
-      await expect(page.getByRole('textbox', { name: 'Trace ID' })).toBeVisible();
-      await expect(page.getByRole('textbox', { name: 'Span ID' })).toBeVisible();
+      // Neither selector input carries an id, the same as every other field here, so
+      // there is no label to query them by.
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeVisible();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeVisible();
     });
   });
 
   test.describe('trace ID', () => {
-    const TRACE_ID = '7c9e66797425440de944be07fc1f90ae';
-    const SPAN_ID = '64f170a95f537095';
-
-    test('a trace ID in the Explore URL round-trips into the editor', async ({
-      page,
-      readProvisionedDataSource,
-    }) => {
+    test('a trace ID in the Explore URL round-trips into the editor', async ({ page, readProvisionedDataSource }) => {
       const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
       await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID] }));
 
@@ -138,7 +136,7 @@ test.describe('Query editor', () => {
       await expect(page.getByText(`Trace ID: ${TRACE_ID}`)).toBeVisible();
 
       await page.getByRole('button', { name: /^Options/ }).click();
-      await expect(page.getByRole('textbox', { name: 'Trace ID' })).toHaveValue(TRACE_ID);
+      await expect(page.getByPlaceholder(TRACE_ID)).toHaveValue(TRACE_ID);
     });
 
     test('the trace ID reaches the query request', async ({ page, readProvisionedDataSource }) => {
@@ -146,26 +144,37 @@ test.describe('Query editor', () => {
 
       // The only cross-language check that src/dataquery.ts and the Go queryModel agree
       // on the field name. A mismatch is dropped silently at unmarshal.
-      const requestPromise = page.waitForRequest(
-        (r) => r.url().includes('/api/ds/query') && r.method() === 'POST'
+      const requestPromise = page.waitForRequest((r) => r.url().includes('/api/ds/query') && r.method() === 'POST');
+      await page.goto(
+        exploreUrl(ds.uid, { queryType: 'profile', profileTypeId: CPU_PROFILE, traceIdSelector: [TRACE_ID] })
       );
-      await page.goto(exploreUrl(ds.uid, { queryType: 'profile', profileTypeId: CPU_PROFILE, traceIdSelector: [TRACE_ID] }));
 
       const payload = (await requestPromise).postDataJSON();
       expect(payload.queries[0].traceIdSelector).toEqual([TRACE_ID]);
     });
 
-    test('setting both Trace ID and Span ID surfaces a conflict error', async ({
-      page,
-      readProvisionedDataSource,
-    }) => {
+    test('a Trace ID disables Span ID', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID] }));
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeDisabled();
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeEnabled();
+    });
+
+    test('a Span ID disables Trace ID', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { spanSelector: [SPAN_ID] }));
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeDisabled();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeEnabled();
+    });
+
+    test('a link carrying both selectors leaves both editable', async ({ page, readProvisionedDataSource }) => {
       const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
       await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID], spanSelector: [SPAN_ID] }));
       await page.getByRole('button', { name: /^Options/ }).click();
-      const conflict = page.getByText(/cannot be used together/);
-      await expect(conflict).toBeVisible();
-      // One copy only, otherwise the messages overlap on top of each other.
-      await expect(conflict).toHaveCount(1);
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeEnabled();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeEnabled();
     });
   });
 
