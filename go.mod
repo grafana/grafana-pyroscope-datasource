@@ -5,10 +5,10 @@ go 1.27.3
 require (
 	connectrpc.com/connect v1.21.1
 	github.com/dustin/go-humanize v1.1.0
-	github.com/grafana/grafana-plugin-sdk-go v0.297.0
+	github.com/grafana/grafana-plugin-sdk-go v0.298.0
 	github.com/grafana/pyroscope/api v1.6.0
 	github.com/magefile/mage v1.17.2
-	github.com/prometheus/prometheus v0.315.0
+	github.com/prometheus/prometheus v0.315.1
 	github.com/stretchr/testify v1.12.1
 	github.com/xlab/treeprint v1.2.0
 	go.opentelemetry.io/otel v1.47.0
@@ -18,6 +18,7 @@ require (
 
 require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
+	github.com/andybalholm/brotli v1.2.7 // indirect
 	github.com/apache/arrow-go/v18 v18.8.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -96,7 +97,8 @@ require (
 	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
-	google.golang.org/genproto v0.0.0-20210630183607-d20f26d13c79 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20261019180522-ce908d29299b // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261019180522-ce908d29299b // indirect
 	google.golang.org/grpc v1.84.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/fsnotify/fsnotify.v1 v1.4.7 // indirect
