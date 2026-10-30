@@ -113,10 +113,18 @@ export class PyroscopeDataSource extends DataSourceWithBackend<Query, PyroscopeD
         labelSelector = addLabelToQuery(labelSelector, filter.key, filter.value, filter.operator);
       }
     }
+    const interpolateSelector = (selector?: string[]) =>
+      selector?.map((value) => this.templateSrv.replace(value, scopedVars));
+
     return {
       ...query,
       labelSelector,
       profileTypeId: this.templateSrv.replace(query.profileTypeId ?? '', scopedVars),
+      // Spread conditionally so an absent selector does not gain an `undefined` key,
+      // which would show up in the serialized query and in normalizeQuery's deepEqual.
+      ...(query.traceIdSelector ? { traceIdSelector: interpolateSelector(query.traceIdSelector) } : {}),
+      ...(query.spanSelector ? { spanSelector: interpolateSelector(query.spanSelector) } : {}),
+      ...(query.profileIdSelector ? { profileIdSelector: interpolateSelector(query.profileIdSelector) } : {}),
     };
   }
 

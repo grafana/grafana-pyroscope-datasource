@@ -184,6 +184,7 @@ export function enrichDataFrameWithAssistantContentMapper(
             label_selector: query.labelSelector,
             operation: 'execute',
             ...(query.profileIdSelector?.length ? { profile_id: query.profileIdSelector } : {}),
+            ...(query.traceIdSelector?.length ? { trace_id: query.traceIdSelector } : {}),
           },
         }),
       ];

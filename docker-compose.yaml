@@ -12,3 +12,10 @@ services:
     depends_on:
       pyroscope:
         condition: service_started
+    # Grafana images ship their own core-bundled copy of grafana-pyroscope-datasource,
+    # and the plugin loader skips the copy mounted from ./dist as a duplicate
+    # ("Skipping loading of plugin as it's a duplicate"). custom.ini sets
+    # `as_external = true` so Grafana skips the core copy at plugin discovery and
+    # loads the locally built plugin instead, both locally and in CI e2e.
+    volumes:
+      - ./custom.ini:/etc/grafana/grafana.ini

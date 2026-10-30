@@ -45,6 +45,28 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
       }))
     : [];
 
+  const spanId = query.spanSelector?.[0] ?? '';
+  const traceId = query.traceIdSelector?.[0] ?? '';
+  // Neither selector reaches the metrics path: the backend passes them only to the
+  // profile RPCs, so on a metrics query they are inert and disabling one of them would
+  // withhold a field the server happily accepts. `both` still runs the profile leg,
+  // which does reject the pair, so only `metrics` opts out.
+  const selectorsApply = query.queryType !== 'metrics';
+  // Pyroscope rejects a request that sets both, so the editor only ever offers one:
+  // filling either field disables the other. The field holding the value stays enabled
+  // so it can be cleared, and a link carrying both leaves neither disabled, which keeps
+  // that state recoverable. The backend still rejects the pair for anything that
+  // reaches it by another route.
+  const traceIdDisabled = spanId !== '' && traceId === '';
+  const spanIdDisabled = traceId !== '' && spanId === '';
+  // Pyroscope only accepts a 128-bit W3C trace ID, so a pasted 16-hex span ID is a
+  // guaranteed server-side rejection. Flag it before the query is sent. A value holding
+  // a template variable is left alone, since it only resolves at query time.
+  const traceIdFormatError =
+    selectorsApply && traceId !== '' && !traceId.includes('$') && !/^[0-9a-fA-F]{32}$/.test(traceId)
+      ? 'Trace ID must be exactly 32 hexadecimal characters.'
+      : undefined;
+
   let collapsedInfo = [`Type: ${query.queryType}`];
   if (query.groupBy?.length) {
     collapsedInfo.push(`Group by: ${query.groupBy.join(', ')}`);
@@ -52,8 +74,15 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
   if (query.limit) {
     collapsedInfo.push(`Limit: ${query.limit}`);
   }
-  if (query.spanSelector?.length) {
+  if (selectorsApply && query.traceIdSelector?.length) {
+    collapsedInfo.push(`Trace ID: ${query.traceIdSelector.join(', ')}`);
+  }
+  if (selectorsApply && query.spanSelector?.length) {
     collapsedInfo.push(`Span ID: ${query.spanSelector.join(', ')}`);
+  }
+  if (traceIdFormatError) {
+    // Same reasoning: a deep link carrying a bad trace ID must say so while collapsed.
+    collapsedInfo.push(traceIdFormatError);
   }
   if (query.maxNodes) {
     collapsedInfo.push(`Max nodes: ${query.maxNodes}`);
@@ -117,19 +146,42 @@ export function QueryOptions({ query, onQueryChange, app, labels }: Props) {
               }}
             />
           </EditorField>
-          <EditorField label={'Span ID'} tooltip={<>Sets the span ID from which to search for profiles.</>}>
-            <Input
-              value={query.spanSelector || ['']}
-              type="string"
-              placeholder="64f170a95f537095"
-              onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
-                onQueryChange({
-                  ...query,
-                  spanSelector: event.currentTarget.value !== '' ? [event.currentTarget.value] : [],
-                });
-              }}
-            />
-          </EditorField>
+          {selectorsApply && (
+            <>
+              <EditorField
+                label={'Trace ID'}
+                tooltip={<>Sets the trace ID from which to search for profiles. Cannot be combined with Span ID.</>}
+                disabled={traceIdDisabled}
+                invalid={traceIdFormatError !== undefined}
+                error={traceIdFormatError}
+              >
+                <Input
+                  value={traceId}
+                  type="string"
+                  placeholder="7c9e66797425440de944be07fc1f90ae"
+                  onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
+                    const value = event.currentTarget.value.trim();
+                    onQueryChange({ ...query, traceIdSelector: value !== '' ? [value] : [] });
+                  }}
+                />
+              </EditorField>
+              <EditorField
+                label={'Span ID'}
+                tooltip={<>Sets the span ID from which to search for profiles. Cannot be combined with Trace ID.</>}
+                disabled={spanIdDisabled}
+              >
+                <Input
+                  value={spanId}
+                  type="string"
+                  placeholder="64f170a95f537095"
+                  onChange={(event: React.SyntheticEvent<HTMLInputElement>) => {
+                    const value = event.currentTarget.value.trim();
+                    onQueryChange({ ...query, spanSelector: value !== '' ? [value] : [] });
+                  }}
+                />
+              </EditorField>
+            </>
+          )}
           <EditorField label={'Max Nodes'} tooltip={<>Sets the maximum number of nodes to return in the flamegraph.</>}>
             <Input
               value={query.maxNodes || ''}
