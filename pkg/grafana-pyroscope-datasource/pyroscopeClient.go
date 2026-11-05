@@ -12,7 +12,7 @@ import (
 
 	typesv1 "github.com/grafana/pyroscope/api/gen/proto/go/types/v1"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
