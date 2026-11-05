@@ -303,8 +303,8 @@ func (c *PyroscopeClient) GetHeatmap(ctx context.Context, profileTypeID string, 
 	}, nil
 }
 
-func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, callSite []string) (*ProfileResponse, error) {
-	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector)))
+func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSelector string, start, end int64, maxNodes *int64, profileIdSelector []string, traceIdSelector []string, callSite []string) (*ProfileResponse, error) {
+	ctx, span := tracing.DefaultTracer().Start(ctx, "datasource.pyroscope.GetProfile", trace.WithAttributes(attribute.String("profileTypeID", profileTypeID), attribute.String("labelSelector", labelSelector), attribute.String("traceIdSelector", strings.Join(traceIdSelector, ","))))
 	defer span.End()
 	req := &connect.Request[querierv1.SelectMergeStacktracesRequest]{
 		Msg: &querierv1.SelectMergeStacktracesRequest{
@@ -314,6 +314,7 @@ func (c *PyroscopeClient) GetProfile(ctx context.Context, profileTypeID, labelSe
 			End:               end,
 			MaxNodes:          maxNodes,
 			ProfileIdSelector: profileIdSelector,
+			TraceIdSelector:   traceIdSelector,
 		},
 	}
 

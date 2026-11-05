@@ -546,5 +546,62 @@ describe('enrichDataFrameWithAssistantContentMapper', () => {
         },
       });
     });
+
+    it('should include trace_id when traceIdSelector is set', () => {
+      const request = createMockRequest([
+        {
+          refId: 'A0',
+          profileTypeId: 'cpu',
+          labelSelector: '{service="test"}',
+          traceIdSelector: ['7c9e66797425440de944be07fc1f90ae'],
+        },
+      ]);
+
+      const dataFrame = createMockDataFrame('A0', 'flamegraph');
+      const response = createMockResponse([dataFrame]);
+
+      const mapper = enrichDataFrameWithAssistantContentMapper(request, 'TestDatasource');
+      mapper(response);
+
+      expect(mockCreateAssistantContextItem).toHaveBeenCalledWith('structured', {
+        title: 'Analyze Flame Graph',
+        data: {
+          start: request.range.from.toISOString(),
+          end: request.range.to.toISOString(),
+          profile_type_id: 'cpu',
+          label_selector: '{service="test"}',
+          operation: 'execute',
+          trace_id: ['7c9e66797425440de944be07fc1f90ae'],
+        },
+      });
+    });
+
+    it('should not include trace_id when traceIdSelector is empty', () => {
+      const request = createMockRequest([
+        {
+          refId: 'A0',
+          profileTypeId: 'cpu',
+          labelSelector: '{service="test"}',
+          traceIdSelector: [],
+        },
+      ]);
+
+      const dataFrame = createMockDataFrame('A0', 'flamegraph');
+      const response = createMockResponse([dataFrame]);
+
+      const mapper = enrichDataFrameWithAssistantContentMapper(request, 'TestDatasource');
+      mapper(response);
+
+      expect(mockCreateAssistantContextItem).toHaveBeenCalledWith('structured', {
+        title: 'Analyze Flame Graph',
+        data: {
+          start: request.range.from.toISOString(),
+          end: request.range.to.toISOString(),
+          profile_type_id: 'cpu',
+          label_selector: '{service="test"}',
+          operation: 'execute',
+        },
+      });
+    });
   });
 });

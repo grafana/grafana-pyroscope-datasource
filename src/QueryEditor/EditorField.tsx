@@ -54,6 +54,11 @@ const getStyles = (theme: GrafanaTheme2, width?: number | string) => ({
     minWidth: theme.spacing(width ?? 0),
   }),
   label: css({
+    // The tooltip icon is taller than the 12px label text, and `vertical-align: middle`
+    // centres it on the baseline plus half an x-height, which lands it a bit below the
+    // text's optical centre. Lay the label out as a flex row so the two line up.
+    alignItems: 'center',
+    display: 'inline-flex',
     fontSize: 12,
     fontWeight: theme.typography.fontWeightMedium,
   }),
