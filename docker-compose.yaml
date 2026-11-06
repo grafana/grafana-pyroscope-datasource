@@ -12,3 +12,7 @@ services:
     depends_on:
       pyroscope:
         condition: service_started
+    environment:
+      PYROSCOPE_CLOUD_URL: ${PYROSCOPE_CLOUD_URL:-}
+      PYROSCOPE_CLOUD_USER: ${PYROSCOPE_CLOUD_USER:-}
+      PYROSCOPE_CLOUD_TOKEN: ${PYROSCOPE_CLOUD_TOKEN:-}

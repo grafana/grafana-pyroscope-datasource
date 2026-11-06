@@ -1,7 +1,7 @@
 {
   "name": "grafana-pyroscope-datasource",
   "description": "Data source for Grafana Pyroscope, horizontally-scalable, highly-available, multi-tenant continuous profiling aggregation system.",
-  "version": "13.0.8",
+  "version": "13.0.10",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
     "dev": "webpack -w -c ./.config/webpack/webpack.config.ts --env development",
@@ -19,7 +19,7 @@
   "devDependencies": {
     "@grafana/eslint-config": "9.0.0",
     "@grafana/plugin-e2e": "3.15.3",
-    "@grafana/sign-plugin": "3.3.3",
+    "@grafana/sign-plugin": "4.0.0",
     "@grafana/tsconfig": "2.2.0",
     "@playwright/test": "1.64.1",
     "@stylistic/eslint-plugin-ts": "4.4.1",

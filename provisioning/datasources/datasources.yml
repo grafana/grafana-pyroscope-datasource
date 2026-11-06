@@ -10,3 +10,16 @@ datasources:
     orgId: 1
     version: 1
     editable: true
+
+  - name: 'pyroscope-cloud'
+    uid: 'pyroscope-cloud'
+    type: 'grafana-pyroscope-datasource'
+    access: proxy
+    url: $PYROSCOPE_CLOUD_URL
+    basicAuth: true
+    basicAuthUser: $PYROSCOPE_CLOUD_USER
+    secureJsonData:
+      basicAuthPassword: $PYROSCOPE_CLOUD_TOKEN
+    isDefault: false
+    orgId: 1
+    version: 1
