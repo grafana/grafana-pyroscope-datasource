@@ -2,7 +2,7 @@ import { AbstractLabelOperator, CoreApp, makeTimeRange } from '@grafana/data';
 import { type TemplateSrv } from '@grafana/runtime';
 
 import { defaultPyroscopeQueryType } from './dataquery';
-import { normalizeQuery, PyroscopeDataSource } from './datasource';
+import { interpolateLabelSelectorValue, normalizeQuery, PyroscopeDataSource } from './datasource';
 import { defaultSettings, mockFetchPyroscopeDatasourceSettings } from './mocks';
 import { type Query } from './types';
 
@@ -78,6 +78,19 @@ describe('Pyroscope data source', () => {
       );
       expect(query).toMatchObject({ labelSelector: `{interpolated="interpolated"}`, profileTypeId: 'interpolated' });
     });
+
+    it('should interpolate multi-value variables in labelSelector as a regex alternation', () => {
+      mockFetchPyroscopeDatasourceSettings();
+      const templateSrv = {
+        replace: (target: string, _scopedVars: unknown, format?: (value: string | string[]) => string): string => {
+          const value = ['pod-1', 'pod-2'];
+          return target.replace(/\$pod/g, format ? format(value) : `{${value.join(',')}}`);
+        },
+      } as unknown as TemplateSrv;
+      const ds = new PyroscopeDataSource(defaultSettings, templateSrv);
+      const query = ds.applyTemplateVariables(defaultQuery({ labelSelector: `{pod=~"$pod"}` }), {});
+      expect(query.labelSelector).toBe(`{pod=~"pod-1|pod-2"}`);
+    });
   });
 
   it('implements ad hoc variable support for keys', async () => {
@@ -102,6 +115,21 @@ describe('Pyroscope data source', () => {
       timeRange: makeTimeRange('2024-01-01T00:00:00', '2024-01-01T01:00:00'),
     });
     expect(keys).toEqual(['xyz', 'tuv'].map((v) => ({ text: v })));
+  });
+});
+
+describe('interpolateLabelSelectorValue', () => {
+  it('leaves a single value unchanged', () => {
+    expect(interpolateLabelSelectorValue('pod.1')).toBe('pod.1');
+    expect(interpolateLabelSelectorValue(['pod.1'])).toBe('pod.1');
+  });
+
+  it('joins multiple values with |', () => {
+    expect(interpolateLabelSelectorValue(['pod-1', 'pod-2', 'pod-3'])).toBe('pod-1|pod-2|pod-3');
+  });
+
+  it('escapes regex special characters in multiple values', () => {
+    expect(interpolateLabelSelectorValue(['a.b', 'c(d)'])).toBe('a\\\\.b|c\\\\(d\\\\)');
   });
 });
 
