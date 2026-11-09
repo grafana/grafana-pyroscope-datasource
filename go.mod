@@ -8,12 +8,12 @@ require (
 	github.com/grafana/grafana-plugin-sdk-go v0.298.0
 	github.com/grafana/pyroscope/api v1.6.0
 	github.com/magefile/mage v1.17.2
-	github.com/prometheus/prometheus v0.315.1
+	github.com/prometheus/prometheus v0.316.0
 	github.com/stretchr/testify v1.12.1
 	github.com/xlab/treeprint v1.2.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
-	golang.org/x/sync v0.24.0
+	golang.org/x/sync v0.25.0
 )
 
 require (
