@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Add explicit permissions for Profiles Drilldown proxy routes, including tenant settings, recording rules, and ad hoc profile uploads ([#117](https://github.com/grafana/grafana-pyroscope-datasource/pull/117)).
+- Add Profiles Drilldown proxy routes to `plugin.json` ([#117](https://github.com/grafana/grafana-pyroscope-datasource/pull/117)).
 
 ## 13.0.10
 
