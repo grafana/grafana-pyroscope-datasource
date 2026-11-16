@@ -56,11 +56,18 @@ This project adheres to the [Grafana Code of Conduct](https://github.com/grafana
 
 ## Local development environment
 
-`npm run server` starts a local Pyroscope instance and a Grafana instance with the plugin pre-provisioned:
+(Optional) To also get a `pyroscope-cloud` data source that points at a Pyroscope Cloud instance, copy `.env.example` to `.env` and fill in the values:
+
+```shell
+cp .env.example .env
+```
+
+Next, `npm run server` starts a local Pyroscope instance and a Grafana instance with the plugin pre-provisioned:
 
 ```shell
 npm run server
 ```
+
 
 ## E2E tests
 

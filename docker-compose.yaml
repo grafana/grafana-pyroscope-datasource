@@ -19,3 +19,7 @@ services:
     # loads the locally built plugin instead, both locally and in CI e2e.
     volumes:
       - ./custom.ini:/etc/grafana/grafana.ini
+    environment:
+      PYROSCOPE_CLOUD_URL: ${PYROSCOPE_CLOUD_URL:-}
+      PYROSCOPE_CLOUD_USER: ${PYROSCOPE_CLOUD_USER:-}
+      PYROSCOPE_CLOUD_TOKEN: ${PYROSCOPE_CLOUD_TOKEN:-}
