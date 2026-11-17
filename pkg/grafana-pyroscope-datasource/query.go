@@ -2,7 +2,9 @@ package pyroscope
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sync"
@@ -44,9 +46,32 @@ const (
 
 	exemplarsFeatureToggle = "profilesExemplars"
 	heatmapFeatureToggle   = "profilesHeatmap"
+
+	// Pyroscope accepts a trace ID only as a 128-bit W3C trace ID, written as 32
+	// hexadecimal characters.
+	traceIDLength = 32
 )
 
 var identityTransformation = func(value float64) float64 { return value }
+
+// validateTraceIDSelector rejects trace IDs the Pyroscope server is guaranteed to
+// refuse, so the caller gets a message naming the problem instead of a generic
+// InvalidArgument from the server. The common mistake is pasting a 16-hex span ID
+// into the Trace ID field.
+//
+// Values arrive here already interpolated, so an unresolved dashboard variable shows
+// up as its literal `$name` and is reported the same way.
+func validateTraceIDSelector(traceIDSelector []string) error {
+	for _, traceID := range traceIDSelector {
+		if len(traceID) != traceIDLength {
+			return fmt.Errorf("invalid trace ID %q: expected %d hexadecimal characters, got %d", traceID, traceIDLength, len(traceID))
+		}
+		if _, err := hex.DecodeString(traceID); err != nil {
+			return fmt.Errorf("invalid trace ID %q: expected %d hexadecimal characters", traceID, traceIDLength)
+		}
+	}
+	return nil
+}
 
 // query processes single Pyroscope query transforming the response to data.Frame packaged in DataResponse
 func (d *PyroscopeDatasource) query(ctx context.Context, pCtx backend.PluginContext, query backend.DataQuery) backend.DataResponse {
@@ -145,6 +170,24 @@ func (d *PyroscopeDatasource) query(ctx context.Context, pCtx backend.PluginCont
 
 	if query.QueryType == queryTypeProfile || query.QueryType == queryTypeBoth {
 		g.Go(func() error {
+			// Pyroscope rejects a request carrying both selectors, and the span path
+			// uses an RPC that has no trace field at all, so silently preferring one
+			// would drop the other. Fail loudly instead. Checked here rather than at
+			// the top of query() because neither selector applies to the metrics path.
+			if len(qm.SpanSelector) > 0 && len(qm.TraceIdSelector) > 0 {
+				err := backend.DownstreamError(errors.New("cannot use span ID and trace ID simultaneously"))
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return err
+			}
+
+			if err := validateTraceIDSelector(qm.TraceIdSelector); err != nil {
+				err = backend.DownstreamError(err)
+				span.RecordError(err)
+				span.SetStatus(codes.Error, err.Error())
+				return err
+			}
+
 			var profileResp *ProfileResponse
 			if len(qm.SpanSelector) > 0 {
 				logger.Debug("Calling GetSpanProfile", "queryModel", qm, "function", logEntrypoint())
@@ -158,7 +201,7 @@ func (d *PyroscopeDatasource) query(ctx context.Context, pCtx backend.PluginCont
 				profileResp = prof
 			} else {
 				logger.Debug("Calling GetProfile", "queryModel", qm, "function", logEntrypoint())
-				prof, err := d.client.GetProfile(gCtx, profileTypeId, labelSelector, query.TimeRange.From.UnixMilli(), query.TimeRange.To.UnixMilli(), qm.MaxNodes, qm.ProfileIdSelector, qm.StackTraceSelector)
+				prof, err := d.client.GetProfile(gCtx, profileTypeId, labelSelector, query.TimeRange.From.UnixMilli(), query.TimeRange.To.UnixMilli(), qm.MaxNodes, qm.ProfileIdSelector, qm.TraceIdSelector, qm.StackTraceSelector)
 				if err != nil {
 					span.RecordError(err)
 					span.SetStatus(codes.Error, err.Error())
