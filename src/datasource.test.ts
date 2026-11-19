@@ -78,6 +78,27 @@ describe('Pyroscope data source', () => {
       );
       expect(query).toMatchObject({ labelSelector: `{interpolated="interpolated"}`, profileTypeId: 'interpolated' });
     });
+
+    it('should interpolate template variables in the selector fields', () => {
+      const ds = setupDatasource();
+      const query = ds.applyTemplateVariables(
+        defaultQuery({ traceIdSelector: ['$var'], spanSelector: ['$var'], profileIdSelector: ['$var'] }),
+        {}
+      );
+      expect(query).toMatchObject({
+        traceIdSelector: ['interpolated'],
+        spanSelector: ['interpolated'],
+        profileIdSelector: ['interpolated'],
+      });
+    });
+
+    it('should not add selector keys that were absent from the query', () => {
+      const ds = setupDatasource();
+      const query = ds.applyTemplateVariables(defaultQuery({}), {});
+      expect('traceIdSelector' in query).toBe(false);
+      expect('spanSelector' in query).toBe(false);
+      expect('profileIdSelector' in query).toBe(false);
+    });
   });
 
   it('implements ad hoc variable support for keys', async () => {

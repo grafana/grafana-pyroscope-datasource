@@ -14,6 +14,120 @@
   "tracing": false,
   "backend": true,
 
+  "routes": [
+    { "method": "GET", "path": "/pyroscope/render", "reqRole": "Viewer", "reqAction": "datasources:query" },
+    { "method": "GET", "path": "/pyroscope/render-diff", "reqRole": "Viewer", "reqAction": "datasources:query" },
+    {
+      "method": "POST",
+      "path": "/querier.v1.QuerierService/LabelNames",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/querier.v1.QuerierService/LabelValues",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/querier.v1.QuerierService/Series",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/querier.v1.QuerierService/SelectMergeProfile",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/querier.v1.QuerierService/SelectHeatmap",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/querier.v1.QuerierService/GetProfileStats",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/settings.v1.SettingsService/Get",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/settings.v1.SettingsService/Set",
+      "reqRole": "Admin",
+      "reqAction": "datasources:write"
+    },
+    {
+      "method": "POST",
+      "path": "/settings.v1.RecordingRulesService/ListRecordingRules",
+      "reqRole": "Viewer",
+      "reqAction": "alert.rules.external:read"
+    },
+    {
+      "method": "POST",
+      "path": "/settings.v1.RecordingRulesService/UpsertRecordingRule",
+      "reqRole": "Editor",
+      "reqAction": "alert.rules.external:write"
+    },
+    {
+      "method": "POST",
+      "path": "/settings.v1.RecordingRulesService/DeleteRecordingRule",
+      "reqRole": "Editor",
+      "reqAction": "alert.rules.external:write"
+    },
+    {
+      "method": "POST",
+      "path": "/adhocprofiles.v1.AdHocProfileService/Get",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    { "method": "POST", "path": "/adhocprofiles.v1.AdHocProfileService/Upload", "reqRole": "Editor" },
+    {
+      "method": "POST",
+      "path": "/adhocprofiles.v1.AdHocProfileService/Diff",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/vcs.v1.VCSService/GithubLogin",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/vcs.v1.VCSService/GithubApp",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/vcs.v1.VCSService/GithubRefresh",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/vcs.v1.VCSService/GetFile",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    },
+    {
+      "method": "POST",
+      "path": "/vcs.v1.VCSService/GetCommit",
+      "reqRole": "Viewer",
+      "reqAction": "datasources:query"
+    }
+  ],
+
   "info": {
     "description": "Data source for Grafana Pyroscope, horizontally-scalable, highly-available, multi-tenant continuous profiling aggregation system.",
     "author": {

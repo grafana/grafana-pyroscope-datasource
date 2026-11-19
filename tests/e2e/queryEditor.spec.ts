@@ -12,8 +12,12 @@ type ExploreOpts = {
   profileTypeId?: string;
   labelSelector?: string;
   queryType?: 'metrics' | 'profile' | 'both';
+  spanSelector?: string[];
+  traceIdSelector?: string[];
 };
 
+// Explore serialises the whole query object into the `panes` URL param, which is what
+// makes every query field deep-linkable without any URL handling in the plugin.
 function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
   const query: Record<string, unknown> = {
     refId: 'A',
@@ -21,7 +25,8 @@ function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
     labelSelector: opts.labelSelector ?? '{}',
     queryType: opts.queryType ?? 'both',
     groupBy: [],
-    spanSelector: [],
+    spanSelector: opts.spanSelector ?? [],
+    traceIdSelector: opts.traceIdSelector ?? [],
     includeExemplars: false,
   };
   if (opts.profileTypeId) {
@@ -38,6 +43,10 @@ function exploreUrl(uid: string, opts: ExploreOpts = {}): string {
 }
 
 const CPU_PROFILE = 'process_cpu:cpu:nanoseconds:cpu:nanoseconds';
+// The placeholders double as locators: neither selector input carries an id, the same as
+// every other field in the editor, so neither has a label to query it by.
+const TRACE_ID = '7c9e66797425440de944be07fc1f90ae';
+const SPAN_ID = '64f170a95f537095';
 
 // Backend warmup (waiting for Pyroscope to finish ingesting its first profile)
 // is handled once for the whole run by `tests/e2e/global-setup.ts`, so every
@@ -110,8 +119,62 @@ test.describe('Query editor', () => {
       await expect(page.getByRole('radio', { name: 'Profile' })).toBeVisible();
       await expect(page.getByRole('radio', { name: 'Both' })).toBeVisible();
 
-      // Span ID is the most distinctively-named field; the placeholder text is part of the accessible name.
-      await expect(page.getByRole('textbox', { name: '64f170a95f537095' })).toBeVisible();
+      // Neither selector input carries an id, the same as every other field here, so
+      // there is no label to query them by.
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeVisible();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeVisible();
+    });
+  });
+
+  test.describe('trace ID', () => {
+    test('a trace ID in the Explore URL round-trips into the editor', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID] }));
+
+      // Options renders collapsed, so the summary has to advertise the trace ID without
+      // the user expanding anything — otherwise a deep link gives no sign it was applied.
+      await expect(page.getByText(`Trace ID: ${TRACE_ID}`)).toBeVisible();
+
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByPlaceholder(TRACE_ID)).toHaveValue(TRACE_ID);
+    });
+
+    test('the trace ID reaches the query request', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+
+      // The only cross-language check that src/dataquery.ts and the Go queryModel agree
+      // on the field name. A mismatch is dropped silently at unmarshal.
+      const requestPromise = page.waitForRequest((r) => r.url().includes('/api/ds/query') && r.method() === 'POST');
+      await page.goto(
+        exploreUrl(ds.uid, { queryType: 'profile', profileTypeId: CPU_PROFILE, traceIdSelector: [TRACE_ID] })
+      );
+
+      const payload = (await requestPromise).postDataJSON();
+      expect(payload.queries[0].traceIdSelector).toEqual([TRACE_ID]);
+    });
+
+    test('a Trace ID disables Span ID', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID] }));
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeDisabled();
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeEnabled();
+    });
+
+    test('a Span ID disables Trace ID', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { spanSelector: [SPAN_ID] }));
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeDisabled();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeEnabled();
+    });
+
+    test('a link carrying both selectors leaves both editable', async ({ page, readProvisionedDataSource }) => {
+      const ds = await readProvisionedDataSource({ fileName: 'datasources.yml' });
+      await page.goto(exploreUrl(ds.uid, { traceIdSelector: [TRACE_ID], spanSelector: [SPAN_ID] }));
+      await page.getByRole('button', { name: /^Options/ }).click();
+      await expect(page.getByPlaceholder(TRACE_ID)).toBeEnabled();
+      await expect(page.getByPlaceholder(SPAN_ID)).toBeEnabled();
     });
   });
 
