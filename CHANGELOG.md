@@ -1,8 +1,11 @@
 # Changelog
 
-## Unreleased
+## 13.0.11
 
-- Add Profiles Drilldown proxy routes to `plugin.json` ([#117](https://github.com/grafana/grafana-pyroscope-datasource/pull/117)).
+- Add Profiles Drilldown proxy routes to `plugin.json` ([#117](https://github.com/grafana/grafana-pyroscope-datasource/pull/117))
+- Add a trace ID selector to Explore ([#55](https://github.com/grafana/grafana-pyroscope-datasource/pull/55))
+- Fix security vulnerabilities in golang.org/x/net, moment, ip-address, basic-ftp and fast-uri
+- Update backend and frontend dependencies
 
 ## 13.0.10
 
