@@ -1,0 +1,210 @@
+{
+  "examples": {
+    "": {
+      "summary": "Local Pyroscope without authentication",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "minStep": "15s"
+          },
+          "title": "Grafana Pyroscope",
+          "url": "http://localhost:4040"
+        }
+      }
+    },
+    "cloud": {
+      "summary": "Grafana Cloud Profiles with HTTP Basic authentication",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "secure": {
+          "basicAuthPassword": {
+            "create": "\u003cACCESS_POLICY_TOKEN\u003e"
+          }
+        },
+        "spec": {
+          "access": "proxy",
+          "basicAuth": true,
+          "basicAuthUser": "\u003cINSTANCE_ID\u003e",
+          "jsonData": {
+            "minStep": "15s"
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://example.grafana.net"
+        }
+      }
+    },
+    "headers": {
+      "summary": "Bearer authentication and tenant headers",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "secure": {
+          "httpHeaderValue1": {
+            "create": "Bearer \u003cTOKEN\u003e"
+          },
+          "httpHeaderValue2": {
+            "create": "\u003cTENANT_ID\u003e"
+          }
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "httpHeaderName1": "Authorization",
+            "httpHeaderName2": "X-Scope-OrgID"
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    },
+    "mutualTLS": {
+      "summary": "Mutual TLS with a private CA",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "secure": {
+          "tlsCACert": {
+            "create": "\u003cCA_CERTIFICATE_PEM\u003e"
+          },
+          "tlsClientCert": {
+            "create": "\u003cCLIENT_CERTIFICATE_PEM\u003e"
+          },
+          "tlsClientKey": {
+            "create": "\u003cCLIENT_PRIVATE_KEY_PEM\u003e"
+          }
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "serverName": "pyroscope.example.com",
+            "tlsAuth": true,
+            "tlsAuthWithCACert": true
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    },
+    "oauth": {
+      "summary": "Forward the current user's OAuth identity",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "keepCookies": [
+              "profile_session"
+            ],
+            "oauthPassThru": true
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    },
+    "pdc": {
+      "summary": "Grafana Cloud Private Data Source Connect",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "enableSecureSocksProxy": true,
+            "secureSocksProxyUsername": "\u003cPRIVATE_NETWORK_ID\u003e"
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    },
+    "privateCA": {
+      "summary": "Verify a privately signed server certificate",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "secure": {
+          "tlsCACert": {
+            "create": "\u003cCA_CERTIFICATE_PEM\u003e"
+          }
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "tlsAuthWithCACert": true
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    },
+    "proxyAuth": {
+      "summary": "Self-managed SOCKS proxy with credentials",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "secure": {
+          "secureSocksProxyPassword": {
+            "create": "\u003cPROXY_PASSWORD\u003e"
+          }
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "enableSecureSocksProxy": true,
+            "secureSocksProxyUsername": "\u003cPROXY_USER\u003e"
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    },
+    "skipTLSVerify": {
+      "summary": "Skip certificate verification on an isolated test server",
+      "value": {
+        "apiVersion": "grafana-pyroscope-datasource.datasource.grafana.app/v0alpha1",
+        "kind": "DataSource",
+        "metadata": {
+          "name": "pyroscope"
+        },
+        "spec": {
+          "access": "proxy",
+          "jsonData": {
+            "tlsSkipVerify": true
+          },
+          "title": "Grafana Pyroscope",
+          "url": "https://pyroscope.example.com"
+        }
+      }
+    }
+  }
+}
