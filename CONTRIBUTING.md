@@ -92,3 +92,18 @@ You need commit access to the repository to publish a release.
 2. Update `CHANGELOG.md` with the changes included in the release.
 3. Open a PR with the changes and merge it.
 4. Follow the release process described [here](https://enghub.grafana-ops.net/docs/default/component/grafana-plugins-platform/plugins-ci-github-actions/010-plugins-ci-github-actions/#cd_1).
+
+## Data source configuration schema
+
+Edit `pkg/schema/dsconfig.json` when a setting changes. Include its storage key, type, default, conditions and editor group. Keep the schema URL pinned to the `github.com/grafana/dsconfig/dsconfig` version in `go.mod`. See the [dsconfig format](https://github.com/grafana/dsconfig/blob/main/dsconfig/schema.md).
+
+In `pkg/schema/dsconfig_test.go`, keep the `settings` struct’s `MinStep` field and JSON tag in sync with the backend’s private `dsJsonModel` in `pkg/grafana-pyroscope-datasource/query.go`. Update `settings` for fields read by Grafana or the SDK, `SecureKeys` for secrets, and the examples for affected connection modes.
+
+Run these commands from the repository root to regenerate and test the schema.
+
+```sh
+go generate ./pkg/schema/...
+go test ./pkg/schema/...
+```
+
+The generated files are `pkg/schema/schema.gen.json`, `pkg/schema/settings.gen.json` and `pkg/schema/settings.examples.gen.json`. The production build copies them and the authored schema to `dist/schema/`.

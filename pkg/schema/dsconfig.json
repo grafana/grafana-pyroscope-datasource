@@ -1,0 +1,587 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/dsconfig/refs/tags/dsconfig/v0.0.13/dsconfig/schema.json",
+  "schemaVersion": "v1",
+  "pluginType": "grafana-pyroscope-datasource",
+  "pluginName": "Grafana Pyroscope",
+  "docURL": "https://grafana.com/docs/grafana/latest/datasources/pyroscope/configure/",
+  "baseFields": [
+    {
+      "from": "plugin_sdk_settings",
+      "exclude": [
+        "plugin_sdk_settings.sigV4Auth"
+      ],
+      "patch": {
+        "plugin_sdk_settings.url": {
+          "label": "URL",
+          "description": "HTTP or HTTPS endpoint of Pyroscope or its gateway.",
+          "placeholder": "http://localhost:4040"
+        },
+        "plugin_sdk_settings.basicAuthUser": {
+          "label": "User",
+          "description": "HTTP Basic username. For Grafana Cloud Profiles, use the numeric instance ID."
+        },
+        "plugin_sdk_settings.basicAuthPassword": {
+          "label": "Password",
+          "description": "HTTP Basic password. For Grafana Cloud Profiles, store an access policy token with profiles:read scope in secureJsonData.basicAuthPassword."
+        },
+        "plugin_sdk_settings.tlsCACert": {
+          "label": "CA Certificate",
+          "description": "PEM trust bundle for the Pyroscope endpoint. When supplied, this bundle replaces the system roots for this connection."
+        },
+        "plugin_sdk_settings.tlsClientCert": {
+          "label": "Client certificate",
+          "description": "PEM client certificate presented to Pyroscope for mutual TLS."
+        },
+        "plugin_sdk_settings.tlsClientKey": {
+          "label": "Client key",
+          "description": "PEM private key paired with the client certificate."
+        },
+        "plugin_sdk_settings.serverName": {
+          "label": "ServerName",
+          "description": "DNS name used for TLS SNI and certificate verification. The editor requests it with TLS client authentication. Provisioning can omit it to use the URL hostname, or supply it with a private CA."
+        }
+      }
+    }
+  ],
+  "fields": [
+    {
+      "id": "plugin_sdk_settings.access",
+      "key": "access",
+      "label": "Access",
+      "description": "Grafana access mode. Provision Pyroscope with proxy access. Queries use the backend HTTP client.",
+      "valueType": "string",
+      "target": "root",
+      "defaultValue": "proxy",
+      "validations": [
+        {
+          "type": "allowedValues",
+          "values": [
+            "proxy",
+            "direct"
+          ]
+        }
+      ],
+      "ui": {
+        "component": "radio",
+        "options": [
+          {
+            "label": "Server (default)",
+            "value": "proxy"
+          },
+          {
+            "label": "Browser",
+            "value": "direct"
+          }
+        ]
+      },
+      "dependsOn": "false"
+    },
+    {
+      "id": "virtual_authMethod",
+      "key": "authMethod",
+      "label": "Authentication method",
+      "description": "Select Basic authentication, forward the signed-in user’s OAuth identity, or use no authentication.",
+      "valueType": "string",
+      "kind": "virtual",
+      "defaultValue": "NoAuth",
+      "validations": [
+        {
+          "type": "allowedValues",
+          "values": [
+            "BasicAuth",
+            "OAuthForward",
+            "NoAuth"
+          ]
+        }
+      ],
+      "ui": {
+        "component": "select",
+        "options": [
+          {
+            "label": "Basic authentication",
+            "value": "BasicAuth"
+          },
+          {
+            "label": "Forward OAuth Identity",
+            "value": "OAuthForward"
+          },
+          {
+            "label": "No Authentication",
+            "value": "NoAuth"
+          }
+        ]
+      },
+      "storage": {
+        "type": "computed",
+        "read": "root.basicAuth == true ? 'BasicAuth' : (jsonData.oauthPassThru == true ? 'OAuthForward' : 'NoAuth')"
+      },
+      "effects": [
+        {
+          "when": "value == 'BasicAuth'",
+          "set": {
+            "plugin_sdk_settings.basicAuth": true,
+            "plugin_sdk_settings.withCredentials": false,
+            "plugin_sdk_settings.oauthPassThru": false
+          }
+        },
+        {
+          "when": "value == 'OAuthForward'",
+          "set": {
+            "plugin_sdk_settings.basicAuth": false,
+            "plugin_sdk_settings.withCredentials": false,
+            "plugin_sdk_settings.oauthPassThru": true
+          }
+        },
+        {
+          "when": "value == 'NoAuth'",
+          "set": {
+            "plugin_sdk_settings.basicAuth": false,
+            "plugin_sdk_settings.withCredentials": false,
+            "plugin_sdk_settings.oauthPassThru": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "plugin_sdk_settings.basicAuth",
+      "key": "basicAuth",
+      "label": "Basic auth",
+      "description": "Send HTTP Basic credentials to Pyroscope. Omit for anonymous access, forwarded OAuth or header-only authentication.",
+      "valueType": "boolean",
+      "target": "root",
+      "role": "auth.basic.enabled",
+      "defaultValue": false,
+      "ui": {
+        "component": "switch"
+      },
+      "tags": [
+        "managed-by:virtual_authMethod"
+      ]
+    },
+    {
+      "id": "plugin_sdk_settings.withCredentials",
+      "key": "withCredentials",
+      "label": "With Credentials",
+      "description": "Legacy flag for cross-site browser credentials. An existing value can make the editor show an unavailable auth mode. Selecting a current mode clears it. Pyroscope sends requests from the backend.",
+      "valueType": "boolean",
+      "target": "root",
+      "defaultValue": false,
+      "tags": [
+        "managed-by:virtual_authMethod"
+      ]
+    },
+    {
+      "id": "plugin_sdk_settings.oauthPassThru",
+      "key": "oauthPassThru",
+      "label": "Forward OAuth Identity",
+      "description": "Forward the signed-in user’s OAuth access token and available ID token to Pyroscope. Set jsonData.oauthPassThru to true for this mode. No stored token is needed.",
+      "valueType": "boolean",
+      "target": "jsonData",
+      "role": "auth.forwardOAuthToken.enabled",
+      "defaultValue": false,
+      "ui": {
+        "component": "switch"
+      },
+      "tags": [
+        "managed-by:virtual_authMethod"
+      ]
+    },
+    {
+      "id": "plugin_sdk_settings.tlsAuthWithCACert",
+      "key": "tlsAuthWithCACert",
+      "label": "Add self-signed certificate",
+      "description": "Use a private CA trust bundle to verify the server certificate.",
+      "valueType": "boolean",
+      "target": "jsonData",
+      "defaultValue": false,
+      "ui": {
+        "component": "switch"
+      }
+    },
+    {
+      "id": "plugin_sdk_settings.tlsAuth",
+      "key": "tlsAuth",
+      "label": "TLS client authentication",
+      "description": "Authenticate to Pyroscope with the client certificate and matching private key.",
+      "valueType": "boolean",
+      "target": "jsonData",
+      "defaultValue": false,
+      "ui": {
+        "component": "switch"
+      }
+    },
+    {
+      "id": "plugin_sdk_settings.tlsSkipVerify",
+      "key": "tlsSkipVerify",
+      "label": "Skip TLS certificate validation",
+      "description": "Skip verification of the Pyroscope server certificate and hostname.",
+      "valueType": "boolean",
+      "target": "jsonData",
+      "role": "transport.tlsSkipVerify",
+      "defaultValue": false,
+      "ui": {
+        "component": "switch"
+      }
+    },
+    {
+      "id": "plugin_sdk_settings.keepCookies",
+      "key": "keepCookies",
+      "label": "Allowed cookies",
+      "description": "Cookie names Grafana may forward to Pyroscope. Omit to forward no user cookies.",
+      "valueType": "array",
+      "target": "jsonData",
+      "item": {
+        "valueType": "string"
+      },
+      "ui": {
+        "component": "list",
+        "placeholder": "cookie-name"
+      }
+    },
+    {
+      "id": "plugin_sdk_settings.timeout",
+      "key": "timeout",
+      "label": "Timeout",
+      "description": "HTTP request timeout in whole seconds. With PDC it also sets the SOCKS connection timeout. Zero disables the HTTP request timeout.",
+      "valueType": "number",
+      "target": "jsonData",
+      "role": "transport.timeoutSeconds",
+      "ui": {
+        "component": "input",
+        "placeholder": "Timeout in seconds"
+      },
+      "defaultValue": 30,
+      "validations": [
+        {
+          "type": "range",
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "plugin_sdk_settings.httpHeaders",
+      "key": "httpHeaders",
+      "label": "HTTP headers",
+      "description": "Headers sent with requests to Pyroscope. Store consecutive names in jsonData.httpHeaderName1, httpHeaderName2 and so on, and their values in secureJsonData.httpHeaderValue1, httpHeaderValue2 and so on.",
+      "valueType": "array",
+      "target": "jsonData",
+      "role": "http.header",
+      "item": {
+        "valueType": "object",
+        "fields": [
+          {
+            "id": "plugin_sdk_settings.httpHeaders.item.name",
+            "key": "name",
+            "label": "Header",
+            "valueType": "string",
+            "isItemField": true,
+            "role": "http.header.name",
+            "required": true,
+            "validations": [
+              {
+                "type": "pattern",
+                "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+                "message": "Use a valid HTTP header name."
+              }
+            ],
+            "ui": {
+              "component": "input",
+              "placeholder": "X-Custom-Header"
+            }
+          },
+          {
+            "id": "plugin_sdk_settings.httpHeaders.item.value",
+            "key": "value",
+            "label": "Value",
+            "valueType": "string",
+            "isItemField": true,
+            "role": "http.header.value",
+            "ui": {
+              "component": "input",
+              "placeholder": "Header Value"
+            }
+          }
+        ]
+      },
+      "storage": {
+        "type": "indexedPair",
+        "key": {
+          "target": "jsonData",
+          "pattern": "httpHeaderName{index}"
+        },
+        "value": {
+          "target": "secureJsonData",
+          "pattern": "httpHeaderValue{index}"
+        },
+        "startIndex": 1
+      }
+    },
+    {
+      "id": "jsonData_minStep",
+      "key": "minStep",
+      "label": "Minimal step",
+      "description": "Minimum time step for metric and heatmap queries and for normalizing cumulative profile values. The editor accepts a whole number and one unit (ms, s, m, h, d, w, M or y). Provisioning also accepts Go durations such as 1m30s. Empty or invalid input uses 15s.",
+      "valueType": "string",
+      "target": "jsonData",
+      "ui": {
+        "component": "input",
+        "placeholder": "15s"
+      },
+      "defaultValue": "15s"
+    },
+    {
+      "id": "jsonData_enableSecureSocksProxy",
+      "key": "enableSecureSocksProxy",
+      "label": "Enabled",
+      "description": "Route the Pyroscope connection through Private Data Source Connect. Grafana displays the switch when the secure SOCKS proxy is enabled for the instance.",
+      "valueType": "boolean",
+      "target": "jsonData",
+      "defaultValue": false,
+      "ui": {
+        "component": "switch"
+      }
+    },
+    {
+      "id": "jsonData_secureSocksProxyUsername",
+      "key": "secureSocksProxyUsername",
+      "label": "Proxy username or private network ID",
+      "description": "Grafana Cloud loads the stack’s PDC private networks and stores the selected network ID as the proxy username. For a self-managed SOCKS proxy, use its username. The SDK defaults to the data source UID when this field is absent.",
+      "valueType": "string",
+      "target": "jsonData",
+      "dependsOn": "jsonData_enableSecureSocksProxy == true",
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "secureJsonData_secureSocksProxyPassword",
+      "key": "secureSocksProxyPassword",
+      "label": "Proxy password",
+      "description": "Password for a SOCKS proxy that requires authentication. A Grafana Cloud PDC agent network needs only the selected network ID.",
+      "valueType": "string",
+      "target": "secureJsonData",
+      "dependsOn": "jsonData_enableSecureSocksProxy == true",
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_keepAlive",
+      "key": "keepAlive",
+      "label": "Proxy keep-alive interval",
+      "description": "TCP keep-alive interval in whole seconds for the SOCKS proxy. A negative value disables TCP keep-alives.",
+      "valueType": "number",
+      "target": "jsonData",
+      "dependsOn": "jsonData_enableSecureSocksProxy == true",
+      "defaultValue": 30,
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "root_user",
+      "key": "user",
+      "label": "Legacy username",
+      "description": "Legacy HTTP Basic username read by the SDK when basicAuth is false. Use basicAuthUser for new Basic-authenticated connections.",
+      "valueType": "string",
+      "target": "root",
+      "dependsOn": "plugin_sdk_settings.basicAuth != true",
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "secureJsonData_password",
+      "key": "password",
+      "label": "Legacy password",
+      "description": "Password for the legacy root user field. New Basic-authenticated connections use secureJsonData.basicAuthPassword.",
+      "valueType": "string",
+      "target": "secureJsonData",
+      "dependsOn": "plugin_sdk_settings.basicAuth != true && root_user != \"\"",
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_dialTimeout",
+      "key": "dialTimeout",
+      "label": "Dial timeout",
+      "description": "Timeout in whole seconds for establishing an HTTP connection. Zero disables the dial timeout.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 10,
+      "tags": [
+        "provisioning"
+      ],
+      "validations": [
+        {
+          "type": "range",
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "jsonData_httpKeepAlive",
+      "key": "httpKeepAlive",
+      "label": "HTTP keep-alive interval",
+      "description": "TCP keep-alive interval in whole seconds for HTTP connections. A negative value disables TCP keep-alives.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 30,
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_httpTLSHandshakeTimeout",
+      "key": "httpTLSHandshakeTimeout",
+      "label": "TLS handshake timeout",
+      "description": "Timeout in whole seconds for the TLS handshake. Zero disables the handshake timeout.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 10,
+      "tags": [
+        "provisioning"
+      ],
+      "validations": [
+        {
+          "type": "range",
+          "min": 0
+        }
+      ]
+    },
+    {
+      "id": "jsonData_httpExpectContinueTimeout",
+      "key": "httpExpectContinueTimeout",
+      "label": "Expect-continue timeout",
+      "description": "Wait in whole seconds for an HTTP 100 Continue response.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 1,
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_httpMaxConnsPerHost",
+      "key": "httpMaxConnsPerHost",
+      "label": "Maximum connections per host",
+      "description": "Maximum total connections per host. Zero allows unlimited connections.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 0,
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_httpMaxIdleConns",
+      "key": "httpMaxIdleConns",
+      "label": "Maximum idle connections",
+      "description": "Maximum idle connections across all hosts. Zero allows unlimited idle connections.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 100,
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_httpMaxIdleConnsPerHost",
+      "key": "httpMaxIdleConnsPerHost",
+      "label": "Maximum idle connections per host",
+      "description": "Maximum idle connections per host. Zero uses the HTTP transport default.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 100,
+      "tags": [
+        "provisioning"
+      ]
+    },
+    {
+      "id": "jsonData_httpIdleConnTimeout",
+      "key": "httpIdleConnTimeout",
+      "label": "Idle connection timeout",
+      "description": "Maximum whole seconds an HTTP connection can remain idle.",
+      "valueType": "number",
+      "target": "jsonData",
+      "defaultValue": 90,
+      "tags": [
+        "provisioning"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "connection",
+      "title": "Connection",
+      "fieldRefs": [
+        "plugin_sdk_settings.url"
+      ]
+    },
+    {
+      "id": "authentication",
+      "title": "Authentication methods",
+      "fieldRefs": [
+        "virtual_authMethod",
+        "plugin_sdk_settings.basicAuthUser",
+        "plugin_sdk_settings.basicAuthPassword"
+      ]
+    },
+    {
+      "id": "tls",
+      "title": "TLS settings",
+      "fieldRefs": [
+        "plugin_sdk_settings.tlsAuthWithCACert",
+        "plugin_sdk_settings.tlsCACert",
+        "plugin_sdk_settings.tlsAuth",
+        "plugin_sdk_settings.serverName",
+        "plugin_sdk_settings.tlsClientCert",
+        "plugin_sdk_settings.tlsClientKey",
+        "plugin_sdk_settings.tlsSkipVerify"
+      ],
+      "optional": true
+    },
+    {
+      "id": "headers",
+      "title": "HTTP headers",
+      "fieldRefs": [
+        "plugin_sdk_settings.httpHeaders"
+      ],
+      "optional": true
+    },
+    {
+      "id": "advanced-http",
+      "title": "Advanced HTTP settings",
+      "fieldRefs": [
+        "plugin_sdk_settings.keepCookies",
+        "plugin_sdk_settings.timeout"
+      ],
+      "optional": true
+    },
+    {
+      "id": "pdc",
+      "title": "Secure Socks Proxy",
+      "fieldRefs": [
+        "jsonData_enableSecureSocksProxy"
+      ],
+      "optional": true
+    },
+    {
+      "id": "querying",
+      "title": "Querying",
+      "fieldRefs": [
+        "jsonData_minStep"
+      ],
+      "optional": true
+    }
+  ],
+  "instructions": [
+    {
+      "tags": [
+        "llm"
+      ],
+      "msg": "Provision this plugin with type grafana-pyroscope-datasource. phlare is its legacy alias. Select only the credentials required by the Pyroscope endpoint. The authentication selector itself is not stored. TLS, custom headers and PDC are independent of the selected authentication method."
+    }
+  ]
+}

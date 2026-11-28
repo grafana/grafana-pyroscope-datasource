@@ -1,0 +1,196 @@
+{
+  "spec": {
+    "type": "object",
+    "required": [
+      "url"
+    ],
+    "properties": {
+      "access": {
+        "description": "Grafana access mode. Provision Pyroscope with proxy access. Queries use the backend HTTP client.",
+        "type": "string",
+        "default": "proxy",
+        "enum": [
+          "proxy",
+          "direct"
+        ],
+        "x-dsconfig-depends-on": "false"
+      },
+      "basicAuth": {
+        "description": "Send HTTP Basic credentials to Pyroscope. Omit for anonymous access, forwarded OAuth or header-only authentication.",
+        "type": "boolean",
+        "default": false
+      },
+      "basicAuthUser": {
+        "description": "HTTP Basic username. For Grafana Cloud Profiles, use the numeric instance ID.",
+        "type": "string",
+        "x-dsconfig-depends-on": "plugin_sdk_settings.basicAuth == true",
+        "x-dsconfig-required-when": "plugin_sdk_settings.basicAuth == true"
+      },
+      "jsonData": {
+        "type": "object",
+        "properties": {
+          "dialTimeout": {
+            "description": "Timeout in whole seconds for establishing an HTTP connection. Zero disables the dial timeout.",
+            "type": "number",
+            "default": 10,
+            "minimum": 0
+          },
+          "enableSecureSocksProxy": {
+            "description": "Route the Pyroscope connection through Private Data Source Connect. Grafana displays the switch when the secure SOCKS proxy is enabled for the instance.",
+            "type": "boolean",
+            "default": false
+          },
+          "httpExpectContinueTimeout": {
+            "description": "Wait in whole seconds for an HTTP 100 Continue response.",
+            "type": "number",
+            "default": 1
+          },
+          "httpHeaders": {
+            "description": "Headers sent with requests to Pyroscope. Store consecutive names in jsonData.httpHeaderName1, httpHeaderName2 and so on, and their values in secureJsonData.httpHeaderValue1, httpHeaderValue2 and so on.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[!#$%\u0026'*+.^_`|~0-9A-Za-z-]+$"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "httpIdleConnTimeout": {
+            "description": "Maximum whole seconds an HTTP connection can remain idle.",
+            "type": "number",
+            "default": 90
+          },
+          "httpKeepAlive": {
+            "description": "TCP keep-alive interval in whole seconds for HTTP connections. A negative value disables TCP keep-alives.",
+            "type": "number",
+            "default": 30
+          },
+          "httpMaxConnsPerHost": {
+            "description": "Maximum total connections per host. Zero allows unlimited connections.",
+            "type": "number",
+            "default": 0
+          },
+          "httpMaxIdleConns": {
+            "description": "Maximum idle connections across all hosts. Zero allows unlimited idle connections.",
+            "type": "number",
+            "default": 100
+          },
+          "httpMaxIdleConnsPerHost": {
+            "description": "Maximum idle connections per host. Zero uses the HTTP transport default.",
+            "type": "number",
+            "default": 100
+          },
+          "httpTLSHandshakeTimeout": {
+            "description": "Timeout in whole seconds for the TLS handshake. Zero disables the handshake timeout.",
+            "type": "number",
+            "default": 10,
+            "minimum": 0
+          },
+          "keepAlive": {
+            "description": "TCP keep-alive interval in whole seconds for the SOCKS proxy. A negative value disables TCP keep-alives.",
+            "type": "number",
+            "default": 30,
+            "x-dsconfig-depends-on": "jsonData_enableSecureSocksProxy == true"
+          },
+          "keepCookies": {
+            "description": "Cookie names Grafana may forward to Pyroscope. Omit to forward no user cookies.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "minStep": {
+            "description": "Minimum time step for metric and heatmap queries and for normalizing cumulative profile values. The editor accepts a whole number and one unit (ms, s, m, h, d, w, M or y). Provisioning also accepts Go durations such as 1m30s. Empty or invalid input uses 15s.",
+            "type": "string",
+            "default": "15s"
+          },
+          "oauthPassThru": {
+            "description": "Forward the signed-in user’s OAuth access token and available ID token to Pyroscope. Set jsonData.oauthPassThru to true for this mode. No stored token is needed.",
+            "type": "boolean",
+            "default": false
+          },
+          "secureSocksProxyUsername": {
+            "description": "Grafana Cloud loads the stack’s PDC private networks and stores the selected network ID as the proxy username. For a self-managed SOCKS proxy, use its username. The SDK defaults to the data source UID when this field is absent.",
+            "type": "string",
+            "x-dsconfig-depends-on": "jsonData_enableSecureSocksProxy == true"
+          },
+          "serverName": {
+            "description": "DNS name used for TLS SNI and certificate verification. The editor requests it with TLS client authentication. Provisioning can omit it to use the URL hostname, or supply it with a private CA.",
+            "type": "string",
+            "x-dsconfig-depends-on": "plugin_sdk_settings.tlsAuth == true"
+          },
+          "timeout": {
+            "description": "HTTP request timeout in whole seconds. With PDC it also sets the SOCKS connection timeout. Zero disables the HTTP request timeout.",
+            "type": "number",
+            "default": 30,
+            "minimum": 0
+          },
+          "tlsAuth": {
+            "description": "Authenticate to Pyroscope with the client certificate and matching private key.",
+            "type": "boolean",
+            "default": false
+          },
+          "tlsAuthWithCACert": {
+            "description": "Use a private CA trust bundle to verify the server certificate.",
+            "type": "boolean",
+            "default": false
+          },
+          "tlsSkipVerify": {
+            "description": "Skip verification of the Pyroscope server certificate and hostname.",
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "url": {
+        "description": "HTTP or HTTPS endpoint of Pyroscope or its gateway.",
+        "type": "string"
+      },
+      "user": {
+        "description": "Legacy HTTP Basic username read by the SDK when basicAuth is false. Use basicAuthUser for new Basic-authenticated connections.",
+        "type": "string",
+        "x-dsconfig-depends-on": "plugin_sdk_settings.basicAuth != true"
+      },
+      "withCredentials": {
+        "description": "Legacy flag for cross-site browser credentials. An existing value can make the editor show an unavailable auth mode. Selecting a current mode clears it. Pyroscope sends requests from the backend.",
+        "type": "boolean",
+        "default": false
+      }
+    }
+  },
+  "secureValues": [
+    {
+      "key": "basicAuthPassword",
+      "description": "HTTP Basic password. For Grafana Cloud Profiles, store an access policy token with profiles:read scope in secureJsonData.basicAuthPassword."
+    },
+    {
+      "key": "tlsCACert",
+      "description": "PEM trust bundle for the Pyroscope endpoint. When supplied, this bundle replaces the system roots for this connection."
+    },
+    {
+      "key": "tlsClientCert",
+      "description": "PEM client certificate presented to Pyroscope for mutual TLS."
+    },
+    {
+      "key": "tlsClientKey",
+      "description": "PEM private key paired with the client certificate."
+    },
+    {
+      "key": "secureSocksProxyPassword",
+      "description": "Password for a SOCKS proxy that requires authentication. A Grafana Cloud PDC agent network needs only the selected network ID."
+    },
+    {
+      "key": "password",
+      "description": "Password for the legacy root user field. New Basic-authenticated connections use secureJsonData.basicAuthPassword."
+    }
+  ]
+}
